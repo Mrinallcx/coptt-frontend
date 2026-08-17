@@ -1,5 +1,7 @@
 "use client"
 
+import { useRouter } from "next/navigation"
+
 import {
   Avatar,
   AvatarFallback,
@@ -22,6 +24,8 @@ import {
 } from "@/components/ui/sidebar"
 import { EllipsisVerticalIcon, CircleUserRoundIcon, BellIcon, LogOutIcon } from "lucide-react"
 
+import { useAuth } from "@/contexts/auth-context"
+
 export function NavUser({
   user,
 }: {
@@ -32,6 +36,16 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
+  const router = useRouter()
+  const { logout } = useAuth()
+
+  // Local handler so we can sign out + bounce to /login without changing
+  // the JSX layout. The dropdown item below just wires its onClick to
+  // this — visually unchanged.
+  const handleLogout = async () => {
+    await logout()
+    router.replace("/login")
+  }
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -88,7 +102,7 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout}>
               <LogOutIcon
               />
               Log out

@@ -1,10 +1,13 @@
 import { AppSidebar } from "@/components/app-sidebar"
 import { CopperPriceCard } from "@/components/copper-price"
-import { SectionCards } from "@/components/section-cards"
+import { OfferCoptt } from "@/components/offer-coptt"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 
-export default function Page() {
+// /offers/coptt — the destination of the "View Offer" button on the
+// COPTT card in the dashboard. Renders the offer terms + the live copper
+// price + a (placeholder) Buy CTA that the mint flow will land on in v2.
+export default function CopttOfferPage() {
   return (
     <SidebarProvider
       style={
@@ -20,9 +23,8 @@ export default function Page() {
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6">
-              {/* Live copper price — drives the COPTT purchase quote */}
+              <OfferCoptt />
               <CopperPriceCard />
-              <SectionCards />
             </div>
           </div>
         </div>

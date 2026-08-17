@@ -1,5 +1,7 @@
 "use client"
 
+import Link from "next/link"
+
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -18,6 +20,8 @@ type CardImageProps = {
   imageUrl: string
   imageAlt: string
   cta: string
+  /** Where View-Offer routes. When absent, the button stays inert. */
+  href?: string
   details?: { label: string; value: string }[]
   teaserBlur?: boolean
 }
@@ -29,6 +33,7 @@ function CardImage({
   imageUrl,
   imageAlt,
   cta,
+  href,
   details,
   teaserBlur,
 }: CardImageProps) {
@@ -65,7 +70,15 @@ function CardImage({
             ))}
           </div>
         ) : null}
-        <Button className="w-full">{cta}</Button>
+        {href ? (
+          <Button className="w-full" render={<Link href={href} />}>
+            {cta}
+          </Button>
+        ) : (
+          <Button className="w-full" disabled>
+            {cta}
+          </Button>
+        )}
       </CardFooter>
       {teaserBlur ? (
         <div className="absolute inset-x-0 bottom-0 top-[45%] z-20 bg-transparent backdrop-blur-md" />
@@ -84,6 +97,7 @@ export function SectionCards() {
       imageUrl: "https://avatar.vercel.sh/coptt",
       imageAlt: "COPTT copper reserve cover",
       cta: "View Offer",
+      href: "/offers/coptt",
       details: [
         { label: "Equity", value: "CHF 5,600,000" },
         { label: "Type of Investment", value: "Equity" },

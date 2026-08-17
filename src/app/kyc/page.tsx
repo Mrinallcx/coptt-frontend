@@ -1,10 +1,12 @@
 import { AppSidebar } from "@/components/app-sidebar"
-import { CopperPriceCard } from "@/components/copper-price"
-import { SectionCards } from "@/components/section-cards"
+import { KycFlow } from "@/components/kyc-flow"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 
-export default function Page() {
+// KYC verification page. Same SidebarInset/SiteHeader shell as the rest of
+// the app so the layout is consistent. All the actual widget mounting and
+// status handling lives in <KycFlow /> — a client component.
+export default function KycPage() {
   return (
     <SidebarProvider
       style={
@@ -17,14 +19,8 @@ export default function Page() {
       <AppSidebar variant="inset" />
       <SidebarInset>
         <SiteHeader />
-        <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6">
-              {/* Live copper price — drives the COPTT purchase quote */}
-              <CopperPriceCard />
-              <SectionCards />
-            </div>
-          </div>
+        <div className="flex flex-1 flex-col items-center py-8 px-4">
+          <KycFlow />
         </div>
       </SidebarInset>
     </SidebarProvider>

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,15 +17,26 @@ import {
   UserIcon,
   KeyRoundIcon,
 } from "lucide-react"
+import { toast } from "sonner"
+import { useAuth } from "@/contexts/auth-context"
+import { countryName } from "@/lib/countries"
 
 export function SettingsContent() {
+  const router = useRouter()
+  const { user } = useAuth()
   const [notifications, setNotifications] = React.useState({
     email: true,
     push: false,
     sms: false,
   })
   const [twoFAEnabled, setTwoFAEnabled] = React.useState(false)
-  const [kycStatus] = React.useState<"none" | "verified">("none")
+  // Source KYC status from the signed-in user. The existing card markup
+  // only distinguishes 'verified' vs 'unverified', so collapse the real
+  // backend states (none/in_progress/pending_review/approved/rejected/expired)
+  // into that binary view: only "approved" is verified, everything else
+  // routes the user to /kyc to (re)start or check status.
+  const kycStatus: "none" | "verified" =
+    user?.kyc_status === "approved" ? "verified" : "none"
 
   return (
     <div className="w-full max-w-2xl space-y-6">
@@ -50,18 +62,57 @@ export function SettingsContent() {
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="name">Full Name</Label>
-            <Input id="name" defaultValue="shadcn" placeholder="Your full name" />
+            {/* Pre-filled from signup. Read-only for now — there's no
+                PATCH /auth/me endpoint yet. Keys off user?.id so a switch
+                of user causes React to remount with the new defaultValue. */}
+            <Input
+              id="name"
+              key={`name-${user?.id ?? ""}`}
+              defaultValue={user?.name ?? ""}
+              placeholder="Your full name"
+              readOnly
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="email">Email Address</Label>
-            <Input id="email" type="email" defaultValue="m@example.com" placeholder="you@example.com" />
+            <Input
+              id="email"
+              key={`email-${user?.id ?? ""}`}
+              type="email"
+              defaultValue={user?.email ?? ""}
+              placeholder="you@example.com"
+              readOnly
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="country">Country</Label>
+            <Input
+              id="country"
+              key={`country-${user?.id ?? ""}`}
+              defaultValue={
+                user?.country
+                  ? `${countryName(user.country) ?? user.country} (${user.country})`
+                  : ""
+              }
+              placeholder="Set at signup"
+              readOnly
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="phone">Phone Number</Label>
             <Input id="phone" type="tel" defaultValue="" placeholder="+1 (555) 000-0000" />
           </div>
           <div className="flex justify-end">
-            <Button size="sm">Save Changes</Button>
+            <Button
+              size="sm"
+              onClick={() =>
+                toast.info(
+                  "Profile editing isn't enabled yet — contact support to change your details.",
+                )
+              }
+            >
+              Save Changes
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -89,7 +140,11 @@ export function SettingsContent() {
                   <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-500">
                     You have not completed identity verification. Some features may be restricted.
                   </p>
-                  <Button size="sm" className="mt-3">
+                  <Button
+                    size="sm"
+                    className="mt-3"
+                    onClick={() => router.push("/kyc")}
+                  >
                     Start KYC Verification
                   </Button>
                 </div>

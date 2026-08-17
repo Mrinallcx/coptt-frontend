@@ -21,12 +21,9 @@ import {
   Settings2Icon,
 } from "lucide-react"
 
+import { useAuth } from "@/contexts/auth-context"
+
 const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
   navMain: [
     {
       title: "Dashboard",
@@ -65,6 +62,17 @@ const data = {
   ],
 }
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  // The signed-in user from auth context. On first render (before
+  // AuthProvider's hydration effect has run) it's null — we fall back to
+  // empty strings so the layout doesn't shift; once hydrated the real
+  // values populate in place.
+  const { user } = useAuth()
+  const sidebarUser = {
+    name: user?.name || user?.email?.split("@")[0] || "",
+    email: user?.email || "",
+    avatar: user?.picture || "",
+  }
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -89,7 +97,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={sidebarUser} />
       </SidebarFooter>
     </Sidebar>
   )
