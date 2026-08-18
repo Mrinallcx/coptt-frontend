@@ -4,8 +4,7 @@
 //
 // Markup matches the shadcn block exactly. On success we DON'T auto-sign-in
 // — backend requires email verification first. We swap the form for a
-// success card with the dev verification URL when the backend surfaces it
-// (ENV=development), so QA can finish the flow without a real mailbox.
+// success card pointing the user at their inbox.
 
 import { useState, type FormEvent } from "react"
 import Link from "next/link"
@@ -13,7 +12,6 @@ import {
   CheckCircle2Icon,
   CircleAlertIcon,
   Loader2Icon,
-  MailCheckIcon,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -46,7 +44,6 @@ import { sortedCountries } from "@/lib/countries"
 
 interface SuccessState {
   email: string
-  verificationUrl?: string
 }
 
 export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
@@ -87,8 +84,8 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
     }
     setBusy(true)
     try {
-      const res = await authApi.register(email, password, name, country)
-      setSuccess({ email, verificationUrl: res.verification_url })
+      await authApi.register(email, password, name, country)
+      setSuccess({ email })
     } catch (err) {
       if (err instanceof ApiRequestError) {
         if (err.status === 409) setError("An account with this email already exists.")
@@ -120,22 +117,6 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
         </CardHeader>
         <CardContent>
           <FieldGroup>
-            {success.verificationUrl && (
-              <Field>
-                <div className="rounded-lg border border-input bg-muted/40 p-3 text-xs space-y-1">
-                  <div className="flex items-center gap-1.5 text-muted-foreground">
-                    <MailCheckIcon className="size-3.5" />
-                    <span className="font-medium">Dev only — verification link</span>
-                  </div>
-                  <a
-                    href={success.verificationUrl}
-                    className="break-all text-foreground hover:underline"
-                  >
-                    {success.verificationUrl}
-                  </a>
-                </div>
-              </Field>
-            )}
             <Field>
               <Button type="button" render={<Link href="/login" />}>
                 Go to sign in
