@@ -4,7 +4,7 @@
 // {APP_URL}/auth/verify?token=<jwt>. We pluck the token out and POST it
 // to /auth/verify-email; backend flips users.email_verified=true.
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -30,6 +30,20 @@ type State =
   | { kind: "error"; message: string };
 
 export default function VerifyEmailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+          <Loader2Icon className="size-5 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <VerifyEmailInner />
+    </Suspense>
+  );
+}
+
+function VerifyEmailInner() {
   const params = useSearchParams();
   const token = params?.get("token") ?? null;
   const [state, setState] = useState<State>({ kind: "loading" });

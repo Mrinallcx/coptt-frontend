@@ -5,7 +5,7 @@
 // backend has nuked every existing session for the user, so we send them
 // to /login to sign in fresh.
 
-import { useState, type FormEvent } from "react";
+import { Suspense, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -29,6 +29,20 @@ import { Label } from "@/components/ui/label";
 import { ApiRequestError, authApi } from "@/lib/api";
 
 export default function ResetPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+          <Loader2Icon className="size-5 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <ResetPasswordInner />
+    </Suspense>
+  );
+}
+
+function ResetPasswordInner() {
   const router = useRouter();
   const params = useSearchParams();
   const token = params?.get("token") ?? null;
