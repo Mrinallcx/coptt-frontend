@@ -15,7 +15,7 @@
 // (NOT under /kyc-widget/...). Loaded idempotently so re-renders don't
 // double-inject the script tag.
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import {
   AlertCircleIcon,
@@ -56,7 +56,11 @@ export function KycFlow() {
   const [statusError, setStatusError] = useState<string | null>(null)
   const [vendorBooting, setVendorBooting] = useState(false)
   const [vendorError, setVendorError] = useState<string | null>(null)
-  const [completionStatus, setCompletionStatus] = useState<string | null>(null)
+  // Set as soon as the widget reports the user finished its last step. The
+  // backend only flips to pending_review/approved once LCX's webhook lands,
+  // so we drive the "submitted" pane off the widget callback instead of
+  // leaving the user staring at a widget that can't advance any further.
+  const [submitted, setSubmitted] = useState(false)
 
   // Widget instance — kept in a ref so we can destroy it on unmount /
   // status flip without dragging it through React state.
@@ -89,7 +93,7 @@ export function KycFlow() {
 
   useEffect(() => {
     if (!accessToken) return
-    if (status?.status !== "pending_review") return
+    if (status?.status !== "pending_review" && !submitted) return
     if (typeof document !== "undefined" && document.visibilityState === "hidden") return
 
     const id = setInterval(async () => {
@@ -104,12 +108,45 @@ export function KycFlow() {
       }
     }, 15_000)
     return () => clearInterval(id)
-  }, [accessToken, status?.status, refreshProfile])
+  }, [accessToken, status?.status, submitted, refreshProfile])
 
   // --- Widget lifecycle ---------------------------------------------
 
   const shouldShowWidget =
-    status && (status.status === "none" || status.status === "in_progress")
+    !submitted &&
+    status &&
+    (status.status === "none" || status.status === "in_progress")
+
+  // While LCX's webhook is in flight the backend still says none/in_progress,
+  // so the submitted pane has to stand in for it.
+  const shouldShowSubmittedPane =
+    !status || status.status === "none" || status.status === "in_progress"
+
+  const destroyWidget = useCallback(() => {
+    if (!widgetRef.current) return
+    try {
+      widgetRef.current.destroy()
+    } catch {
+      /* ignore */
+    }
+    widgetRef.current = null
+  }, [])
+
+  const syncStatus = useCallback(async () => {
+    if (!accessToken) return
+    try {
+      setStatus(await kycApi.getStatus(accessToken))
+    } catch {
+      /* ignore — the poll will retry */
+    }
+    await refreshProfile()
+  }, [accessToken, refreshProfile])
+
+  const handleWidgetComplete = useCallback(() => {
+    setSubmitted(true)
+    destroyWidget()
+    void syncStatus()
+  }, [destroyWidget, syncStatus])
 
   useEffect(() => {
     if (!accessToken || !shouldShowWidget) return
@@ -163,18 +200,8 @@ export function KycFlow() {
           sessionToken: session.session_token,
           apiUrl: `${session.widget_base_url.replace(/\/$/, "")}/api/v1`,
           theme: "light",
-          onComplete: (result) => {
-            setCompletionStatus(result.status)
-            void (async () => {
-              if (!accessToken) return
-              try {
-                const fresh = await kycApi.getStatus(accessToken)
-                setStatus(fresh)
-              } catch {
-                /* ignore */
-              }
-              await refreshProfile()
-            })()
+          onComplete: () => {
+            handleWidgetComplete()
           },
           onError: (e) => {
             setVendorError(`${e.code}: ${e.message}`)
@@ -190,21 +217,10 @@ export function KycFlow() {
     return () => {
       cancelled = true
     }
-  }, [accessToken, shouldShowWidget, refreshProfile])
+  }, [accessToken, shouldShowWidget, handleWidgetComplete])
 
   // Destroy widget on unmount or when the status flips out of active.
-  useEffect(() => {
-    return () => {
-      if (widgetRef.current) {
-        try {
-          widgetRef.current.destroy()
-        } catch {
-          /* ignore */
-        }
-        widgetRef.current = null
-      }
-    }
-  }, [])
+  useEffect(() => destroyWidget, [destroyWidget])
 
   // --- Retry path (rejected / expired) ------------------------------
 
@@ -265,12 +281,24 @@ export function KycFlow() {
         </Card>
       )}
 
-      {status?.status === "pending_review" && (
+      {(status?.status === "pending_review" ||
+        (submitted && shouldShowSubmittedPane)) && (
         <TerminalCard
           icon={<Loader2Icon className="size-5 animate-spin" />}
           title="We're reviewing your submission"
-          description="An admin will review your documents shortly. We'll email you when there's a decision."
+          description="Your documents are with LCX for review. We'll email you when there's a decision — this page updates on its own."
           tone="info"
+          action={
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => router.push("/dashboard")}>
+                Go to dashboard
+              </Button>
+              <Button variant="outline" onClick={() => void syncStatus()}>
+                <RefreshCcwIcon />
+                Refresh status
+              </Button>
+            </div>
+          }
         />
       )}
 
@@ -345,21 +373,25 @@ export function KycFlow() {
               </div>
             )}
 
-            {completionStatus && (
-              <div className="flex items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-xs">
-                <CheckCircle2Icon className="size-4 mt-0.5 shrink-0 text-emerald-600" />
-                <span>
-                  Submission received. We&apos;ll email you when there&apos;s
-                  a decision.
-                </span>
-              </div>
-            )}
-
             {/* LCX mounts its UI inside this div via containerId. */}
             <div
               id={WIDGET_CONTAINER_ID}
               className="min-h-[400px] rounded-md border border-border bg-muted/20"
             />
+
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button size="sm" variant="outline" onClick={handleWidgetComplete}>
+                <CheckCircle2Icon />
+                I&apos;ve finished uploading
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => router.push("/dashboard")}
+              >
+                Back to dashboard
+              </Button>
+            </div>
 
             <p className="text-xs text-muted-foreground text-center">
               Powered by LCX. Your documents are stored on their secure
