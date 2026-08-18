@@ -10,8 +10,9 @@
 // React Query because the new branch doesn't pull it in and most auth
 // calls are one-shot anyway.
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
+// Staging/prod default: same-origin /backend (Next rewrite → Go API).
+// Local dev: set NEXT_PUBLIC_API_URL=http://localhost:8081 in .env.local.
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/backend";
 
 // --- Auth types (mirror backend responses) ---
 
