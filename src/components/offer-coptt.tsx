@@ -4,21 +4,19 @@
 // title → description → offer terms → highlights → KYC note → buy flow.
 
 import type { ReactNode } from "react"
-import { ArrowLeftIcon, CheckIcon } from "lucide-react"
-import Link from "next/link"
+import { CheckIcon } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { BuyCopttCard } from "@/components/buy-coptt-card"
 
-const TERMS: { label: string; value: string }[] = [
-  { label: "Equity", value: "CHF 5,600,000" },
+const TERMS: { label: string; value: string; highlight?: boolean }[] = [
+  { label: "Equity", value: "CHF 5,600,000", highlight: true },
   { label: "Type of Investment", value: "Equity" },
   { label: "Min. Investment Amount", value: "N/A" },
   { label: "Max. Investment Amount", value: "N/A" },
-  { label: "Issue Date", value: "15 October 2025" },
-  { label: "Term", value: "12 months" },
+  { label: "Issue Date", value: "15 October 2025", highlight: true },
+  { label: "Term", value: "12 months", highlight: true },
 ]
 
 const HIGHLIGHTS = [
@@ -52,17 +50,6 @@ const panel =
 export function OfferCoptt() {
   return (
     <div className="w-full space-y-8 pb-2">
-      <Button
-        size="sm"
-        variant="ghost"
-        className="-ml-2 h-8 text-muted-foreground"
-        nativeButton={false}
-        render={<Link href="/dashboard" />}
-      >
-        <ArrowLeftIcon className="size-3.5" />
-        Back to dashboard
-      </Button>
-
       <header className={cn("overflow-hidden", panel)}>
         <div
           className="h-1 bg-gradient-to-r from-[#8B4513] via-[#B87333] to-[#D4956A]"
@@ -96,11 +83,33 @@ export function OfferCoptt() {
       <Section title="Offer terms">
         <dl className={cn("grid grid-cols-2 gap-px overflow-hidden sm:grid-cols-3", panel)}>
           {TERMS.map((term) => (
-            <div key={term.label} className="bg-card px-4 py-4">
-              <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            <div
+              key={term.label}
+              className={cn(
+                "px-4 py-4",
+                term.highlight
+                  ? "bg-gradient-to-br from-amber-50/95 via-orange-50/40 to-amber-50/20 ring-1 ring-inset ring-amber-200/70 dark:from-amber-950/45 dark:via-orange-950/20 dark:to-amber-950/10 dark:ring-amber-800/40"
+                  : "bg-card",
+              )}
+            >
+              <dt
+                className={cn(
+                  "text-[11px] font-medium uppercase tracking-wide",
+                  term.highlight
+                    ? "text-[#9A5B2E]/80 dark:text-amber-400/80"
+                    : "text-muted-foreground",
+                )}
+              >
                 {term.label}
               </dt>
-              <dd className="mt-1.5 text-sm font-semibold tabular-nums">{term.value}</dd>
+              <dd
+                className={cn(
+                  "mt-1.5 text-sm font-semibold tabular-nums",
+                  term.highlight && "text-[#8B4513] dark:text-amber-300",
+                )}
+              >
+                {term.value}
+              </dd>
             </div>
           ))}
         </dl>
