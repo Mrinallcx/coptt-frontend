@@ -96,7 +96,7 @@ export default function ForgotPasswordPage() {
                   </a>
                 </div>
               )}
-              <Button size="sm" className="w-full" variant="outline" render={<Link href="/login" />}>
+              <Button size="sm" className="w-full" variant="outline" nativeButton={false} render={<Link href="/login" />}>
                 Back to sign in
               </Button>
             </div>

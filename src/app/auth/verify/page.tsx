@@ -106,16 +106,16 @@ function VerifyEmailInner() {
         </CardHeader>
         <CardContent>
           {state.kind === "success" && (
-            <Button size="sm" className="w-full" render={<Link href="/login" />}>
+            <Button size="sm" className="w-full" nativeButton={false} render={<Link href="/login" />}>
               Continue to sign in
             </Button>
           )}
           {state.kind === "error" && (
             <div className="flex flex-col gap-2">
-              <Button size="sm" variant="outline" className="w-full" render={<Link href="/signup" />}>
+              <Button size="sm" variant="outline" className="w-full" nativeButton={false} render={<Link href="/signup" />}>
                 Sign up again
               </Button>
-              <Button size="sm" variant="ghost" className="w-full" render={<Link href="/login" />}>
+              <Button size="sm" variant="ghost" className="w-full" nativeButton={false} render={<Link href="/login" />}>
                 Back to sign in
               </Button>
             </div>

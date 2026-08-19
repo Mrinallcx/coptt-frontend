@@ -16,7 +16,7 @@
 // dependency. The only calls we make are `eth_requestAccounts`,
 // `eth_chainId`, `wallet_switchEthereumChain`, and `personal_sign`.
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useState, type ReactNode } from "react"
 import { toast } from "sonner"
 import {
   CircleDollarSignIcon,
@@ -24,22 +24,14 @@ import {
   WalletIcon,
   CheckIcon,
   ExternalLinkIcon,
-  AlertTriangleIcon,
+  LockIcon,
 } from "lucide-react"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 
 import { useAuth } from "@/contexts/auth-context"
 import {
@@ -88,6 +80,83 @@ function getProvider(): EthereumProvider | null {
 
 function short(addr: string) {
   return addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : ""
+}
+
+const panel = "overflow-hidden rounded-xl border border-stone-200/90 bg-white shadow-sm"
+
+type StepState = "complete" | "active" | "locked"
+
+function RequirementStep({
+  step,
+  title,
+  detail,
+  state,
+  isLast,
+  children,
+}: {
+  step: number
+  title: string
+  detail?: string
+  state: StepState
+  isLast?: boolean
+  children?: ReactNode
+}) {
+  return (
+    <div
+      className={cn(
+        "relative grid grid-cols-[2rem_1fr] gap-x-4",
+        !isLast && "pb-8",
+        state === "locked" && "opacity-50",
+      )}
+    >
+      {!isLast ? (
+        <div
+          className={cn(
+            "absolute left-4 top-8 h-[calc(100%-1.25rem)] w-px -translate-x-1/2",
+            state === "complete" ? "bg-stone-300" : "bg-stone-200",
+          )}
+          aria-hidden
+        />
+      ) : null}
+
+      <div
+        className={cn(
+          "relative z-10 flex size-8 items-center justify-center rounded-full border text-xs font-semibold",
+          state === "complete" &&
+            "border-emerald-200 bg-emerald-50 text-emerald-800",
+          state === "active" && "border-stone-800 bg-stone-900 text-white",
+          state === "locked" && "border-stone-200 bg-stone-100 text-stone-400",
+        )}
+      >
+        {state === "complete" ? (
+          <CheckIcon className="size-3.5" />
+        ) : state === "locked" ? (
+          <LockIcon className="size-3" />
+        ) : (
+          step
+        )}
+      </div>
+
+      <div className="min-w-0 pt-0.5">
+        <p
+          className={cn(
+            "text-sm font-semibold tracking-tight",
+            state === "active" ? "text-stone-950" : "text-stone-800",
+          )}
+        >
+          {title}
+        </p>
+        {detail ? (
+          <p className="mt-1 text-xs leading-relaxed text-stone-500">{detail}</p>
+        ) : null}
+        {state === "active" && children ? (
+          <div className="mt-4 rounded-lg border border-stone-200 bg-stone-50/80 p-4">
+            {children}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  )
 }
 
 // ---- Component ---------------------------------------------------------
@@ -339,192 +408,212 @@ export function BuyCopttCard() {
 
   // ---- Render ----------------------------------------------------------
 
+  const kycDone = !kycRequired || kycApproved
+  const kycDetail = kycDone
+    ? "Identity verified — you may proceed."
+    : "Required before any token can be minted."
+
+  const walletDetail = walletBound
+    ? serverWallet?.address
+    : kycDone
+      ? hasProvider
+        ? "Connect MetaMask on Sepolia and sign to bind."
+        : "Install MetaMask to continue."
+      : "Unlocked after identity verification."
+
+  const activeStep: 1 | 2 | 3 = !kycDone ? 1 : !walletBound ? 2 : 3
+
+  function stepState(step: 1 | 2 | 3): StepState {
+    if (step < activeStep) return "complete"
+    if (step === activeStep) return "active"
+    return "locked"
+  }
+
   return (
-    <Card>
-      <CardHeader className="pb-4">
-        <CardTitle className="text-base flex items-center gap-2">
-          <CircleDollarSignIcon className="size-4" />
-          Buy COPTT
-        </CardTitle>
-        <CardDescription>
-          Mint COPTT on Sepolia. Testnet — no payment. 1 COPTT = 1 lb of copper.
-        </CardDescription>
-      </CardHeader>
+    <div className={panel}>
+      <div
+        className="h-1 bg-gradient-to-r from-[#8B4513] via-[#B87333] to-[#D4956A]"
+        aria-hidden
+      />
 
-      <CardContent className="space-y-4">
-        {/* ---- Status row: KYC + Wallet badges --------------------- */}
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <Badge variant={kycApproved ? "default" : "outline"} className="gap-1">
-            {kycApproved ? <CheckIcon className="size-3" /> : <AlertTriangleIcon className="size-3" />}
-            KYC {kycApproved ? "approved" : user?.kyc_status ?? "not started"}
-          </Badge>
-          <Badge variant={walletBound ? "default" : "outline"} className="gap-1">
-            <WalletIcon className="size-3" />
-            {walletBound ? `Wallet ${short(serverWallet!.address)}` : "Wallet not bound"}
-          </Badge>
-          <Badge variant={chainOk ? "secondary" : "outline"} className="gap-1">
-            {TARGET_CHAIN_NAME}
-            {chainOk ? <CheckIcon className="size-3" /> : null}
-          </Badge>
-        </div>
+      <div className="border-b border-stone-200 px-6 py-5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-500">
+          Subscription
+        </p>
+        <h2 className="mt-1 font-heading text-xl font-semibold tracking-tight text-stone-950">
+          Mint COPTT
+        </h2>
+        <p className="mt-2 text-sm text-stone-600">
+          Sepolia testnet · 1 COPTT = 1 lb copper · No payment required
+        </p>
+      </div>
 
-        {kycRequired && !kycApproved ? (
-          <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
-            <p className="font-medium">Complete KYC to buy COPTT</p>
-            <p className="text-muted-foreground text-xs mt-1">
-              We&apos;re required to verify every investor before any token can be minted.
-            </p>
-            <Button size="sm" variant="outline" className="mt-2" render={<Link href="/kyc" />}>
-              Start KYC
-            </Button>
-          </div>
-        ) : null}
-
+      <div className="px-6 py-6">
         {!kycRequired && !kycApproved ? (
-          <div className="rounded-md border border-dashed border-amber-500/40 bg-amber-500/5 p-2 text-xs text-muted-foreground">
-            <span className="font-medium">Dev mode:</span> KYC gate is disabled on this
-            environment. Mint is open to any logged-in user with a bound wallet.
-          </div>
+          <p className="mb-6 rounded-lg border border-dashed border-stone-300 bg-stone-50 px-3 py-2 text-xs text-stone-600">
+            Dev environment — KYC gate is disabled for minting.
+          </p>
         ) : null}
 
-        <Separator />
+        <RequirementStep
+          step={1}
+          title="Identity verification"
+          detail={stepState(1) === "complete" ? "Verified" : kycDetail}
+          state={stepState(1)}
+        >
+          <p className="text-sm text-stone-700">
+            Regulatory compliance requires a verified investor profile before minting.
+          </p>
+          <Button
+            className="mt-3 bg-stone-900 text-white hover:bg-stone-800"
+            nativeButton={false}
+            render={<Link href="/kyc" />}
+          >
+            Complete verification
+          </Button>
+        </RequirementStep>
 
-        {/* ---- Wallet step ---------------------------------------- */}
-        {!hasProvider ? (
-          <div className="rounded-md border bg-muted/30 p-3 text-sm">
-            <p className="font-medium">MetaMask not detected</p>
-            <p className="text-muted-foreground text-xs mt-1">
-              Install the MetaMask browser extension and reload to bind your wallet.
-            </p>
-            <Button
-              size="sm"
-              variant="outline"
-              className="mt-2"
-              render={
-                <a
-                  href="https://metamask.io/download/"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                />
-              }
-            >
-              Get MetaMask <ExternalLinkIcon className="size-3" />
-            </Button>
-          </div>
-        ) : !walletBound ? (
-          <div className="space-y-3">
-            <div className="text-sm">
-              <p className="font-medium">Step 1 — Connect & bind wallet</p>
-              <p className="text-muted-foreground text-xs mt-1">
-                You&apos;ll sign a short message to prove you own this address. No transaction is
-                sent, no gas is paid.
+        <RequirementStep
+          step={2}
+          title="Wallet binding"
+          detail={
+            stepState(2) === "complete"
+              ? `Bound · ${short(serverWallet!.address)}`
+              : walletDetail
+          }
+          state={stepState(2)}
+        >
+          {!hasProvider ? (
+            <>
+              <p className="text-sm text-stone-700">
+                MetaMask is required. Install the extension, then reload this page.
               </p>
-            </div>
-
-            {!browserAccount ? (
-              <Button size="sm" onClick={connect} disabled={connecting}>
-                {connecting ? <Loader2Icon className="animate-spin" /> : <WalletIcon />}
-                Connect MetaMask
-              </Button>
-            ) : (
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div className="text-xs text-muted-foreground">
-                  Connected as <span className="font-mono">{short(browserAccount)}</span>
-                  {!chainOk ? (
-                    <span className="ml-2 text-amber-500">
-                      — switch to {TARGET_CHAIN_NAME}
-                    </span>
-                  ) : null}
-                </div>
-                <Button
-                  size="sm"
-                  onClick={bind}
-                  disabled={binding || !chainOk}
-                >
-                  {binding ? <Loader2Icon className="animate-spin" /> : <CheckIcon />}
-                  Sign & bind
-                </Button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="text-sm">
-              <p className="font-medium flex items-center gap-1.5">
-                <CheckIcon className="size-3.5 text-emerald-500" />
-                Wallet bound
-              </p>
-              <p className="text-muted-foreground text-xs mt-1">
-                <span className="font-mono">{serverWallet?.address}</span>
-              </p>
-            </div>
-            {!accountMatchesServer && browserAccount ? (
-              <p className="text-xs text-amber-500">
-                MetaMask is on a different account ({short(browserAccount)}). Mints still go to
-                the bound address; switch in MetaMask if you want them to match.
-              </p>
-            ) : null}
-          </div>
-        )}
-
-        {/* ---- Mint step ------------------------------------------ */}
-        {walletBound ? (
-          <>
-            <Separator />
-            <div className="space-y-3">
-              <div className="text-sm">
-                <p className="font-medium">Step 2 — Mint COPTT</p>
-                <p className="text-muted-foreground text-xs mt-1">
-                  Tokens are minted directly to your bound wallet. Sepolia testnet only.
-                </p>
-              </div>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                <div className="flex-1">
-                  <Label htmlFor="amount" className="text-xs text-muted-foreground">
-                    Amount (lbs)
-                  </Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    inputMode="decimal"
-                    min="0"
-                    step="0.01"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    disabled={!canMintKyc || minting}
-                  />
-                </div>
-                <Button
-                  size="sm"
-                  onClick={mint}
-                  disabled={!canMintKyc || minting}
-                >
-                  {minting ? <Loader2Icon className="animate-spin" /> : <CircleDollarSignIcon />}
-                  Mint
-                </Button>
-              </div>
-              {lastMintTx ? (
-                <p className="text-xs text-muted-foreground">
-                  Last tx:{" "}
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-3 border-stone-300 bg-white"
+                nativeButton={false}
+                render={
                   <a
-                    className="underline font-mono"
-                    href={`https://sepolia.etherscan.io/tx/${lastMintTx}`}
+                    href="https://metamask.io/download/"
                     target="_blank"
                     rel="noreferrer noopener"
-                  >
-                    {short(lastMintTx)}
-                  </a>
-                </p>
-              ) : null}
-            </div>
-          </>
-        ) : null}
+                  />
+                }
+              >
+                Install MetaMask
+                <ExternalLinkIcon className="size-3" />
+              </Button>
+            </>
+          ) : !browserAccount ? (
+            <>
+              <p className="text-sm text-stone-700">
+                Connect your wallet, then sign a message to bind it to your account.
+                No transaction fee.
+              </p>
+              <Button
+                className="mt-3 bg-stone-900 text-white hover:bg-stone-800"
+                onClick={connect}
+                disabled={connecting}
+              >
+                {connecting ? (
+                  <Loader2Icon className="animate-spin" />
+                ) : (
+                  <WalletIcon />
+                )}
+                Connect MetaMask
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-stone-700">
+                Connected{" "}
+                <span className="font-mono font-medium">{short(browserAccount)}</span>
+                {!chainOk ? (
+                  <span className="text-amber-700">
+                    {" "}
+                    — please switch MetaMask to {TARGET_CHAIN_NAME}
+                  </span>
+                ) : null}
+              </p>
+              <Button
+                className="mt-3 bg-stone-900 text-white hover:bg-stone-800"
+                onClick={bind}
+                disabled={binding || !chainOk}
+              >
+                {binding ? <Loader2Icon className="animate-spin" /> : <CheckIcon />}
+                Sign & bind wallet
+              </Button>
+            </>
+          )}
+        </RequirementStep>
 
-        {/* Loading shimmer for the very first probe */}
+        <RequirementStep
+          step={3}
+          title="Mint allocation"
+          detail={
+            stepState(3) === "locked"
+              ? "Available once your wallet is bound."
+              : "Enter amount and mint to your bound wallet."
+          }
+          state={stepState(3)}
+          isLast
+        >
+          {!accountMatchesServer && browserAccount ? (
+            <p className="mb-3 text-xs text-amber-800">
+              MetaMask is on {short(browserAccount)}. Tokens mint to your bound
+              address.
+            </p>
+          ) : null}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="flex-1 space-y-1.5">
+              <Label htmlFor="amount" className="text-xs font-medium text-stone-600">
+                Amount (lbs)
+              </Label>
+              <Input
+                id="amount"
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                disabled={!canMintKyc || minting}
+                className="border-stone-300 bg-white"
+              />
+            </div>
+            <Button
+              className="bg-[#9A5B2E] text-white hover:bg-[#8B4A1E] sm:min-w-[7.5rem]"
+              onClick={mint}
+              disabled={!canMintKyc || minting}
+            >
+              {minting ? (
+                <Loader2Icon className="animate-spin" />
+              ) : (
+                <CircleDollarSignIcon />
+              )}
+              Mint COPTT
+            </Button>
+          </div>
+          {lastMintTx ? (
+            <p className="mt-3 text-xs text-stone-500">
+              Last transaction{" "}
+              <a
+                className="font-mono text-stone-700 underline underline-offset-2"
+                href={`https://sepolia.etherscan.io/tx/${lastMintTx}`}
+                target="_blank"
+                rel="noreferrer noopener"
+              >
+                {short(lastMintTx)}
+              </a>
+            </p>
+          ) : null}
+        </RequirementStep>
+
         {!serverChecked ? (
-          <p className="text-xs text-muted-foreground">Checking wallet status…</p>
+          <p className="mt-4 text-xs text-stone-500">Checking account status…</p>
         ) : null}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

@@ -2,24 +2,139 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
+import {
+  BellIcon,
+  CheckCircle2Icon,
+  ChevronRightIcon,
+  CircleAlertIcon,
+  ClockIcon,
+  KeyRoundIcon,
+  ShieldCheckIcon,
+  SmartphoneIcon,
+  XCircleIcon,
+} from "lucide-react"
+import { toast } from "sonner"
+
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import {
-  CheckCircle2Icon,
-  CircleAlertIcon,
-  ShieldCheckIcon,
-  SmartphoneIcon,
-  BellIcon,
-  UserIcon,
-  KeyRoundIcon,
-} from "lucide-react"
-import { toast } from "sonner"
+import { Switch } from "@/components/ui/switch"
+import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
 import { countryName } from "@/lib/countries"
+import type { KYCStatus } from "@/lib/api"
+
+type KYCUi = {
+  label: string
+  headline: string
+  description: string
+  cta: string | null
+  tone: "success" | "warning" | "info" | "danger"
+}
+
+const kycUi: Record<KYCStatus, KYCUi> = {
+  approved: {
+    label: "Verified",
+    headline: "Identity verified",
+    description: "You have full investment access.",
+    cta: null,
+    tone: "success",
+  },
+  none: {
+    label: "Not started",
+    headline: "Verification required",
+    description: "Complete KYC to invest and mint tokens.",
+    cta: "Start verification",
+    tone: "warning",
+  },
+  in_progress: {
+    label: "In progress",
+    headline: "Verification in progress",
+    description: "Continue where you left off.",
+    cta: "Continue verification",
+    tone: "warning",
+  },
+  pending_review: {
+    label: "Under review",
+    headline: "Documents under review",
+    description: "Review usually takes 1–2 business days.",
+    cta: "View status",
+    tone: "info",
+  },
+  rejected: {
+    label: "Rejected",
+    headline: "Verification unsuccessful",
+    description: "Retry with updated documents.",
+    cta: "Retry verification",
+    tone: "danger",
+  },
+  expired: {
+    label: "Expired",
+    headline: "Verification expired",
+    description: "Renew to restore full access.",
+    cta: "Renew verification",
+    tone: "warning",
+  },
+}
+
+const kycToneClass = {
+  success: "border-emerald-200 bg-emerald-50/50 text-emerald-900",
+  warning: "border-amber-200 bg-amber-50/50 text-amber-900",
+  info: "border-sky-200 bg-sky-50/50 text-sky-900",
+  danger: "border-red-200 bg-red-50/50 text-red-900",
+}
+
+function getInitials(name: string, email: string): string {
+  const source = name.trim() || email.split("@")[0]?.replace(/[._-]+/g, " ") || ""
+  return source
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase()
+}
+
+function SettingsBlock({
+  title,
+  description,
+  children,
+}: {
+  title: string
+  description?: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className="space-y-4">
+      <div>
+        <h2 className="text-sm font-semibold">{title}</h2>
+        {description ? (
+          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+        ) : null}
+      </div>
+      <div className="rounded-xl border bg-card">{children}</div>
+    </section>
+  )
+}
+
+function FieldRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col gap-1 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="text-sm font-medium sm:text-right">{value || "—"}</span>
+    </div>
+  )
+}
+
+function KycStatusIcon({ tone }: { tone: KYCUi["tone"] }) {
+  if (tone === "success") return <CheckCircle2Icon className="size-4 shrink-0" />
+  if (tone === "danger") return <XCircleIcon className="size-4 shrink-0" />
+  if (tone === "info") return <ClockIcon className="size-4 shrink-0" />
+  return <CircleAlertIcon className="size-4 shrink-0" />
+}
 
 export function SettingsContent() {
   const router = useRouter()
@@ -30,338 +145,173 @@ export function SettingsContent() {
     sms: false,
   })
   const [twoFAEnabled, setTwoFAEnabled] = React.useState(false)
-  // Source KYC status from the signed-in user. The existing card markup
-  // only distinguishes 'verified' vs 'unverified', so collapse the real
-  // backend states (none/in_progress/pending_review/approved/rejected/expired)
-  // into that binary view: only "approved" is verified, everything else
-  // routes the user to /kyc to (re)start or check status.
-  const kycStatus: "none" | "verified" =
-    user?.kyc_status === "approved" ? "verified" : "none"
+  const [showTwoFASetup, setShowTwoFASetup] = React.useState(false)
+
+  const kyc = kycUi[user?.kyc_status ?? "none"]
+  const displayName = user?.name?.trim() || user?.email?.split("@")[0] || "Investor"
+  const countryDisplay = user?.country
+    ? `${countryName(user.country) ?? user.country} (${user.country})`
+    : "Not set"
 
   return (
-    <div className="w-full max-w-2xl space-y-6">
-      {/* Page title */}
-      <div>
-        <h1 className="text-xl font-semibold">Settings</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Manage your account preferences and security.
-        </p>
-      </div>
-
-      <Separator />
-
-      {/* ── Profile Information ── */}
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-center gap-2">
-            <UserIcon className="size-4 text-muted-foreground" />
-            <CardTitle className="text-base">Profile Information</CardTitle>
-          </div>
-          <CardDescription>Update your personal details.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="name">Full Name</Label>
-            {/* Pre-filled from signup. Read-only for now — there's no
-                PATCH /auth/me endpoint yet. Keys off user?.id so a switch
-                of user causes React to remount with the new defaultValue. */}
-            <Input
-              id="name"
-              key={`name-${user?.id ?? ""}`}
-              defaultValue={user?.name ?? ""}
-              placeholder="Your full name"
-              readOnly
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="email">Email Address</Label>
-            <Input
-              id="email"
-              key={`email-${user?.id ?? ""}`}
-              type="email"
-              defaultValue={user?.email ?? ""}
-              placeholder="you@example.com"
-              readOnly
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="country">Country</Label>
-            <Input
-              id="country"
-              key={`country-${user?.id ?? ""}`}
-              defaultValue={
-                user?.country
-                  ? `${countryName(user.country) ?? user.country} (${user.country})`
-                  : ""
-              }
-              placeholder="Set at signup"
-              readOnly
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="phone">Phone Number</Label>
-            <Input id="phone" type="tel" defaultValue="" placeholder="+1 (555) 000-0000" />
-          </div>
-          <div className="flex justify-end">
-            <Button
-              size="sm"
-              onClick={() =>
-                toast.info(
-                  "Profile editing isn't enabled yet — contact support to change your details.",
-                )
-              }
-            >
-              Save Changes
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ── KYC Verification ── */}
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-center gap-2">
-            <ShieldCheckIcon className="size-4 text-muted-foreground" />
-            <CardTitle className="text-base">KYC Verification</CardTitle>
-          </div>
-          <CardDescription>
-            Identity verification is required to unlock full investment access.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {kycStatus === "none" ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 dark:border-amber-900 dark:bg-amber-950/30">
-              <div className="flex items-start gap-3">
-                <CircleAlertIcon className="size-5 text-amber-600 mt-0.5 shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-amber-800 dark:text-amber-400">
-                    KYC Not Verified
-                  </p>
-                  <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-500">
-                    You have not completed identity verification. Some features may be restricted.
-                  </p>
-                  <Button
-                    size="sm"
-                    className="mt-3"
-                    onClick={() => router.push("/kyc")}
-                  >
-                    Start KYC Verification
-                  </Button>
-                </div>
-                <Badge
-                  variant="outline"
-                  className="shrink-0 border-amber-300 text-amber-700 text-xs"
-                >
-                  Unverified
-                </Badge>
-              </div>
-            </div>
+    <div className="mx-auto w-full max-w-2xl space-y-10">
+      <header className="flex items-center gap-4">
+        <Avatar className="size-12">
+          <AvatarImage src={user?.picture} alt={displayName} />
+          <AvatarFallback className="bg-muted text-sm font-medium">
+            {getInitials(user?.name ?? "", user?.email ?? "")}
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl font-semibold tracking-tight">Settings</h1>
+          <p className="truncate text-sm text-muted-foreground">{user?.email}</p>
+        </div>
+        <div className="hidden shrink-0 flex-wrap justify-end gap-2 sm:flex">
+          {user?.email_verified ? (
+            <Badge variant="secondary">Email verified</Badge>
           ) : (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 dark:border-emerald-900 dark:bg-emerald-950/30">
-              <div className="flex items-start gap-3">
-                <CheckCircle2Icon className="size-5 text-emerald-600 mt-0.5 shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-400">
-                    KYC Verified
-                  </p>
-                  <p className="mt-0.5 text-xs text-emerald-700 dark:text-emerald-500">
-                    Your identity has been verified. Full investment access is enabled.
-                  </p>
-                </div>
-                <Badge
-                  variant="outline"
-                  className="shrink-0 border-emerald-300 text-emerald-700 text-xs"
-                >
-                  Verified
-                </Badge>
-              </div>
-            </div>
+            <Badge variant="outline">Email unverified</Badge>
           )}
+          <Badge variant="outline">KYC · {kyc.label}</Badge>
+        </div>
+      </header>
 
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="rounded-lg border bg-muted/30 px-4 py-3">
-              <p className="text-xs text-muted-foreground mb-1">Without KYC</p>
-              <ul className="space-y-1 text-xs text-muted-foreground">
-                <li className="flex items-center gap-1.5">
-                  <CircleAlertIcon className="size-3 text-amber-500" /> View listings only
-                </li>
-                <li className="flex items-center gap-1.5">
-                  <CircleAlertIcon className="size-3 text-amber-500" /> No investment access
-                </li>
-                <li className="flex items-center gap-1.5">
-                  <CircleAlertIcon className="size-3 text-amber-500" /> Limited dashboard data
-                </li>
-              </ul>
-            </div>
-            <div className="rounded-lg border bg-muted/30 px-4 py-3">
-              <p className="text-xs text-muted-foreground mb-1">With KYC</p>
-              <ul className="space-y-1 text-xs text-muted-foreground">
-                <li className="flex items-center gap-1.5">
-                  <CheckCircle2Icon className="size-3 text-emerald-500" /> Full investment access
-                </li>
-                <li className="flex items-center gap-1.5">
-                  <CheckCircle2Icon className="size-3 text-emerald-500" /> Token transfers enabled
-                </li>
-                <li className="flex items-center gap-1.5">
-                  <CheckCircle2Icon className="size-3 text-emerald-500" /> All deal details visible
-                </li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <SettingsBlock title="Profile" description="Registered account details.">
+        <div className="divide-y">
+          <FieldRow label="Name" value={user?.name ?? ""} />
+          <FieldRow label="Email" value={user?.email ?? ""} />
+          <FieldRow label="Country" value={countryDisplay} />
+          <FieldRow label="Phone" value="" />
+        </div>
+        <p className="border-t px-4 py-3 text-xs text-muted-foreground">
+          Profile edits aren&apos;t self-serve yet. Contact support to update your details.
+        </p>
+      </SettingsBlock>
 
-      {/* ── Two-Factor Authentication ── */}
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-center gap-2">
-            <KeyRoundIcon className="size-4 text-muted-foreground" />
-            <CardTitle className="text-base">Two-Factor Authentication</CardTitle>
-          </div>
-          <CardDescription>
-            Add an extra layer of security using Google Authenticator.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between rounded-xl border bg-muted/20 px-4 py-3">
-            <div className="flex items-center gap-3">
-              <SmartphoneIcon className="size-5 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">Google Authenticator</p>
-                <p className="text-xs text-muted-foreground">
-                  {twoFAEnabled ? "2FA is active on your account" : "Not configured yet"}
-                </p>
-              </div>
+      <SettingsBlock title="Identity verification" description="Required for investing.">
+        <div className={cn("border-b px-4 py-4", kycToneClass[kyc.tone])}>
+          <div className="flex items-start gap-3">
+            <KycStatusIcon tone={kyc.tone} />
+            <div className="min-w-0 flex-1 space-y-1">
+              <p className="text-sm font-medium">{kyc.headline}</p>
+              <p className="text-sm opacity-80">{kyc.description}</p>
             </div>
-            <Badge
-              variant="outline"
-              className={
-                twoFAEnabled
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                  : "border-muted text-muted-foreground"
-              }
-            >
-              {twoFAEnabled ? "Enabled" : "Disabled"}
+            <Badge variant="outline" className="shrink-0 bg-background/80">
+              {kyc.label}
             </Badge>
           </div>
+          {kyc.cta ? (
+            <Button
+              size="sm"
+              className="mt-4"
+              onClick={() => router.push("/kyc")}
+            >
+              {kyc.cta}
+              <ChevronRightIcon />
+            </Button>
+          ) : null}
+        </div>
+        <div className="px-4 py-3 text-xs text-muted-foreground">
+          Verified accounts can invest, mint tokens, and access full offer details.
+        </div>
+      </SettingsBlock>
 
-          {!twoFAEnabled && (
-            <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
+      <SettingsBlock title="Security" description="Protect your account.">
+        <div className="flex items-center justify-between gap-4 px-4 py-4">
+          <div className="flex items-center gap-3">
+            <SmartphoneIcon className="size-4 text-muted-foreground" />
+            <div>
+              <p className="text-sm font-medium">Two-factor authentication</p>
               <p className="text-xs text-muted-foreground">
-                Scan this QR code with the{" "}
-                <span className="font-medium text-foreground">Google Authenticator</span> app to
-                set up 2FA.
+                {twoFAEnabled ? "Enabled" : "Not configured"}
               </p>
-              {/* Placeholder QR block */}
-              <div className="mx-auto w-32 h-32 rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/50 flex items-center justify-center text-xs text-muted-foreground">
-                QR Code
-              </div>
-              <p className="text-center text-[10px] text-muted-foreground">
-                Or enter setup key manually: <span className="font-mono font-medium tracking-widest">JBSWY3DPEHPK3PXP</span>
-              </p>
-              <div className="space-y-1.5">
-                <Label htmlFor="totp">Enter 6-digit code to confirm</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="totp"
-                    placeholder="000000"
-                    maxLength={6}
-                    className="font-mono tracking-widest text-center"
-                  />
-                  <Button
-                    size="sm"
-                    className="shrink-0"
-                    onClick={() => setTwoFAEnabled(true)}
-                  >
-                    Verify & Enable
-                  </Button>
-                </div>
-              </div>
             </div>
-          )}
+          </div>
+          {!twoFAEnabled && !showTwoFASetup ? (
+            <Button size="sm" variant="outline" onClick={() => setShowTwoFASetup(true)}>
+              Set up
+            </Button>
+          ) : twoFAEnabled ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setTwoFAEnabled(false)
+                setShowTwoFASetup(false)
+              }}
+            >
+              Disable
+            </Button>
+          ) : null}
+        </div>
 
-          {twoFAEnabled && (
-            <div className="flex justify-between items-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900 dark:bg-emerald-950/30">
-              <div className="flex items-center gap-2">
-                <CheckCircle2Icon className="size-4 text-emerald-600" />
-                <p className="text-sm text-emerald-700 font-medium dark:text-emerald-400">
-                  2FA is enabled and protecting your account.
-                </p>
+        {showTwoFASetup && !twoFAEnabled ? (
+          <>
+            <Separator />
+            <div className="space-y-3 px-4 py-4">
+              <p className="text-xs text-muted-foreground">
+                Scan with Google Authenticator, then enter your 6-digit code.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  id="totp"
+                  placeholder="000000"
+                  maxLength={6}
+                  className="font-mono tracking-widest"
+                />
+                <Button size="sm" onClick={() => setTwoFAEnabled(true)}>
+                  Enable
+                </Button>
               </div>
               <Button
+                variant="ghost"
                 size="sm"
-                variant="outline"
-                className="text-red-600 border-red-200 hover:bg-red-50"
-                onClick={() => setTwoFAEnabled(false)}
+                className="h-auto px-0 text-muted-foreground"
+                onClick={() => setShowTwoFASetup(false)}
               >
-                Disable
+                Cancel
               </Button>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </>
+        ) : null}
+      </SettingsBlock>
 
-      {/* ── Notifications ── */}
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-center gap-2">
-            <BellIcon className="size-4 text-muted-foreground" />
-            <CardTitle className="text-base">Notifications</CardTitle>
-          </div>
-          <CardDescription>Choose how you want to receive alerts and updates.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <SettingsBlock title="Notifications">
+        <div className="divide-y">
           {(
             [
-              {
-                key: "email" as const,
-                label: "Email Notifications",
-                description: "Receive investment updates and reports by email",
-              },
-              {
-                key: "push" as const,
-                label: "Push Notifications",
-                description: "Get real-time alerts in your browser",
-              },
-              {
-                key: "sms" as const,
-                label: "SMS Notifications",
-                description: "Receive critical alerts via SMS",
-              },
+              { key: "email" as const, label: "Email", hint: "Updates and reports" },
+              { key: "push" as const, label: "Push", hint: "Browser alerts" },
+              { key: "sms" as const, label: "SMS", hint: "Critical alerts" },
             ] as const
-          ).map(({ key, label, description }) => (
+          ).map(({ key, label, hint }) => (
             <div
               key={key}
-              className="flex items-center justify-between rounded-xl border bg-muted/20 px-4 py-3"
+              className="flex items-center justify-between gap-4 px-4 py-3.5"
             >
               <div>
                 <p className="text-sm font-medium">{label}</p>
-                <p className="text-xs text-muted-foreground">{description}</p>
+                <p className="text-xs text-muted-foreground">{hint}</p>
               </div>
-              {/* Toggle */}
-              <button
-                role="switch"
-                aria-checked={notifications[key]}
-                onClick={() =>
-                  setNotifications((prev) => ({ ...prev, [key]: !prev[key] }))
+              <Switch
+                checked={notifications[key]}
+                onCheckedChange={(checked) =>
+                  setNotifications((prev) => ({ ...prev, [key]: checked }))
                 }
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                  notifications[key] ? "bg-primary" : "bg-muted"
-                }`}
-              >
-                <span
-                  className={`pointer-events-none block h-5 w-5 rounded-full bg-white shadow-sm ring-0 transition-transform ${
-                    notifications[key] ? "translate-x-5" : "translate-x-0"
-                  }`}
-                />
-              </button>
+              />
             </div>
           ))}
-          <div className="flex justify-end pt-1">
-            <Button size="sm">Save Preferences</Button>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+        <div className="flex justify-end border-t px-4 py-3">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => toast.success("Notification preferences saved")}
+          >
+            Save
+          </Button>
+        </div>
+      </SettingsBlock>
     </div>
   )
 }

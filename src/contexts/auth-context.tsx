@@ -30,6 +30,7 @@ import {
   readTokens,
   writeTokens,
 } from "@/lib/auth-storage";
+import { DEV_BYPASS_AUTH, DEV_BYPASS_USER } from "@/lib/dev-bypass-auth";
 
 interface AuthContextValue {
   user: UserProfile | null;
@@ -63,7 +64,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { accessToken: stored, refreshToken: storedRefresh } = readTokens();
 
       if (!stored || !storedRefresh) {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled) {
+          if (DEV_BYPASS_AUTH) {
+            setUser(DEV_BYPASS_USER);
+            setAccessToken("dev-bypass");
+          }
+          setIsLoading(false);
+        }
         return;
       }
 

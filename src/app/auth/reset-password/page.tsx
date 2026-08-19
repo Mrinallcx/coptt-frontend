@@ -66,7 +66,7 @@ function ResetPasswordInner() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button size="sm" className="w-full" render={<Link href="/auth/forgot-password" />}>
+            <Button size="sm" className="w-full" nativeButton={false} render={<Link href="/auth/forgot-password" />}>
               Request a new link
             </Button>
           </CardContent>

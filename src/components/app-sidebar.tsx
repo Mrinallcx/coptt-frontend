@@ -18,7 +18,6 @@ import {
   CircleHelpIcon,
   FolderIcon,
   LayoutDashboardIcon,
-  Settings2Icon,
 } from "lucide-react"
 
 import { useAuth } from "@/contexts/auth-context"
@@ -43,14 +42,6 @@ const data = {
     },
   ],
   navSecondary: [
-    {
-      title: "Settings",
-      url: "/settings",
-      icon: (
-        <Settings2Icon
-        />
-      ),
-    },
     {
       title: "Get Help",
       url: "#",

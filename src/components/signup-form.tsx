@@ -118,7 +118,7 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
         <CardContent>
           <FieldGroup>
             <Field>
-              <Button type="button" render={<Link href="/login" />}>
+              <Button nativeButton={false} render={<Link href="/login" />}>
                 Go to sign in
               </Button>
             </Field>

@@ -16,8 +16,12 @@ export default function SettingsPage() {
       <AppSidebar variant="inset" />
       <SidebarInset>
         <SiteHeader />
-        <div className="flex flex-1 flex-col items-center py-8 px-4">
-          <SettingsContent />
+        <div className="flex flex-1 flex-col">
+          <div className="@container/main flex flex-1 flex-col">
+            <div className="flex flex-col px-4 py-6 md:py-8 lg:px-6">
+              <SettingsContent />
+            </div>
+          </div>
         </div>
       </SidebarInset>
     </SidebarProvider>

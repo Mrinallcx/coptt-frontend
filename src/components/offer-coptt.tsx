@@ -1,34 +1,17 @@
 "use client"
 
-// COPTT offer detail. Mirrors the data shown on the dashboard card but
-// in a more readable layout, with a Buy CTA at the bottom. The Buy CTA
-// is intentionally inert today — the on-chain mint flow lands next.
-//
-// Design language matches settings-content.tsx (Card, sm buttons, lucide
-// icons, neutral Shadcn tones). No new primitives.
+// COPTT offer detail. Information hierarchy mirrors the dashboard card:
+// title → description → offer terms → highlights → KYC note → buy flow.
 
-import {
-  ArrowLeftIcon,
-  ShieldCheckIcon,
-  CircleDollarSignIcon,
-} from "lucide-react"
+import type { ReactNode } from "react"
+import { ArrowLeftIcon, CheckIcon } from "lucide-react"
 import Link from "next/link"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
+import { cn } from "@/lib/utils"
 import { BuyCopttCard } from "@/components/buy-coptt-card"
 
-// Top-level facts straight from the original dashboard card (which was
-// the source of truth for the offer terms). Keep them in lockstep — if
-// product changes either side, change both.
 const TERMS: { label: string; value: string }[] = [
   { label: "Equity", value: "CHF 5,600,000" },
   { label: "Type of Investment", value: "Equity" },
@@ -46,85 +29,102 @@ const HIGHLIGHTS = [
   "KYC-gated wallets only — fully regulatory-compliant",
 ]
 
+function Section({
+  title,
+  children,
+  className,
+}: {
+  title: string
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <section className={cn("space-y-3", className)}>
+      <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+      {children}
+    </section>
+  )
+}
+
+const panel =
+  "rounded-xl border border-border/80 bg-card shadow-sm"
+
 export function OfferCoptt() {
   return (
-    <div className="space-y-4">
-      {/* Page header — back link + title row */}
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Button size="sm" variant="ghost" render={<Link href="/dashboard" />}>
-          <ArrowLeftIcon className="size-3.5" />
-          Back to dashboard
-        </Button>
-      </div>
+    <div className="w-full space-y-8 pb-2">
+      <Button
+        size="sm"
+        variant="ghost"
+        className="-ml-2 h-8 text-muted-foreground"
+        nativeButton={false}
+        render={<Link href="/dashboard" />}
+      >
+        <ArrowLeftIcon className="size-3.5" />
+        Back to dashboard
+      </Button>
 
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Badge variant="secondary">Commodities</Badge>
-                <Badge variant="outline" className="text-xs">
-                  Equity
-                </Badge>
-              </div>
-              <CardTitle className="text-xl">COPTT — Tokenized Copper</CardTitle>
-              <CardDescription>
-                A tokenized forward sale of in-ground copper reserves, giving
-                institutional investors discounted, transparent, on-chain
-                exposure to future copper production.
-              </CardDescription>
+      <header className={cn("overflow-hidden", panel)}>
+        <div
+          className="h-1 bg-gradient-to-r from-[#8B4513] via-[#B87333] to-[#D4956A]"
+          aria-hidden
+        />
+        <div className="p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9A5B2E]">
+                Commodities
+              </span>
+              <Badge variant="outline">Equity</Badge>
             </div>
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+              <span className="size-1.5 rounded-full bg-emerald-500" />
+              Live
+            </span>
           </div>
-        </CardHeader>
 
-        <CardContent className="space-y-6">
-          {/* Terms — two-column key/value grid */}
-          <section className="space-y-2">
-            <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-              <CircleDollarSignIcon className="size-3.5" />
-              Offer terms
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
-              {TERMS.map((t) => (
-                <div
-                  key={t.label}
-                  className="flex items-center justify-between border-b border-border/40 py-1.5"
-                >
-                  <span className="text-muted-foreground">{t.label}</span>
-                  <span className="font-medium">{t.value}</span>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <Separator />
-
-          {/* Highlights */}
-          <section className="space-y-2">
-            <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-              <ShieldCheckIcon className="size-3.5" />
-              Highlights
-            </h3>
-            <ul className="space-y-1.5 text-sm">
-              {HIGHLIGHTS.map((h) => (
-                <li key={h} className="flex items-start gap-2">
-                  <span className="text-muted-foreground mt-1.5 size-1 rounded-full bg-muted-foreground shrink-0" />
-                  <span>{h}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <Separator />
-
-          <p className="text-xs text-muted-foreground">
-            Investing requires completed KYC. The mint module below will
-            walk you through connecting a wallet and minting on Sepolia.
+          <h1 className="mt-4 font-heading text-3xl font-semibold tracking-tight">
+            COPTT
+          </h1>
+          <p className="mt-1 text-muted-foreground">Tokenized Copper</p>
+          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            A tokenized forward sale of in-ground copper reserves, giving institutional
+            investors discounted, transparent, on-chain exposure to future copper production.
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </header>
 
-      {/* Wallet + mint flow. KYC-gated on both the client and the server. */}
+      <Section title="Offer terms">
+        <dl className={cn("grid grid-cols-2 gap-px overflow-hidden sm:grid-cols-3", panel)}>
+          {TERMS.map((term) => (
+            <div key={term.label} className="bg-card px-4 py-4">
+              <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                {term.label}
+              </dt>
+              <dd className="mt-1.5 text-sm font-semibold tabular-nums">{term.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </Section>
+
+      <Section title="Highlights">
+        <ul className={cn("divide-y px-1", panel)}>
+          {HIGHLIGHTS.map((highlight) => (
+            <li
+              key={highlight}
+              className="flex gap-3 px-4 py-3.5 text-sm leading-relaxed text-foreground/90"
+            >
+              <CheckIcon className="mt-0.5 size-4 shrink-0 text-[#B87333]" aria-hidden />
+              <span>{highlight}</span>
+            </li>
+          ))}
+        </ul>
+      </Section>
+
+      <p className={cn("px-4 py-3 text-xs leading-relaxed text-muted-foreground", panel)}>
+        Investing requires completed KYC. The mint module below will walk you through
+        connecting a wallet and minting on Sepolia.
+      </p>
+
       <BuyCopttCard />
     </div>
   )
