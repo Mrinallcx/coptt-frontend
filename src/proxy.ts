@@ -12,7 +12,6 @@
 // sign-in form rendering" UX bug).
 
 import { NextResponse, type NextRequest } from "next/server";
-import { DEV_BYPASS_AUTH } from "@/lib/dev-bypass-auth";
 
 // Must match the name auth-storage.ts writes. Keep this list in sync if
 // you ever rename — middleware can't import client-only code (it runs in
@@ -27,19 +26,6 @@ const AUTH_PREFIXES = ["/login", "/signup"];
 
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
-
-  // TEMP: skip the login gate so local UI work can open /dashboard.
-  // Flip DEV_BYPASS_AUTH off before pushing.
-  if (DEV_BYPASS_AUTH) {
-    if (AUTH_PREFIXES.some((p) => pathname.startsWith(p))) {
-      const url = req.nextUrl.clone();
-      url.pathname = "/dashboard";
-      url.search = "";
-      return NextResponse.redirect(url);
-    }
-    return NextResponse.next();
-  }
-
   const hasAuth = req.cookies.get(AUTH_COOKIE_NAME)?.value;
 
   if (PROTECTED_PREFIXES.some((p) => pathname.startsWith(p)) && !hasAuth) {
