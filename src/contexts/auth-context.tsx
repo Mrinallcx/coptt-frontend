@@ -1,10 +1,8 @@
 "use client";
 
-// AuthProvider holds the signed-in user + access token in a React Context.
-// On mount it hydrates from localStorage (via auth-storage), and falls back
-// to /auth/refresh once if the access token is stale. login() and logout()
-// keep localStorage + cookie + state in lockstep — the cookie is what
-// middleware reads to decide whether to redirect.
+// AuthProvider holds the signed-in profile. Tokens are HttpOnly cookies:
+// browser JavaScript never stores or reads them. `accessToken` remains a
+// compatibility/session-ready sentinel for components that gate API calls.
 //
 // Note: this is a client component. It can be safely placed in the root
 // layout because Next.js will only run it in the browser, and server-
@@ -25,11 +23,7 @@ import {
   type AuthResponse,
   type UserProfile,
 } from "@/lib/api";
-import {
-  clearTokens,
-  readTokens,
-  writeTokens,
-} from "@/lib/auth-storage";
+const COOKIE_SESSION = "cookie-session";
 
 interface AuthContextValue {
   user: UserProfile | null;
@@ -54,40 +48,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // On first mount, restore session from storage. Try the access token
-  // first; fall back to refresh if it expired (most common case after a
-  // longer absence).
+  // Restore from the HttpOnly access cookie; if it expired, rotate the
+  // HttpOnly refresh cookie once and use the returned profile.
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { accessToken: stored, refreshToken: storedRefresh } = readTokens();
-
-      if (!stored || !storedRefresh) {
-        if (!cancelled) setIsLoading(false);
-        return;
-      }
-
+      // One-time cleanup for sessions created before the HttpOnly-cookie
+      // migration. Never leave a usable refresh token in Web Storage.
+      localStorage.removeItem("coptt_access_token");
+      localStorage.removeItem("coptt_refresh_token");
       try {
-        const profile = await authApi.getProfile(stored);
+        const profile = await authApi.getProfile(COOKIE_SESSION);
         if (cancelled) return;
         setUser(profile);
-        setAccessToken(stored);
+        setAccessToken(COOKIE_SESSION);
       } catch (err) {
         const isAuthErr = err instanceof ApiRequestError && err.status === 401;
         if (!isAuthErr) {
-          // Network/server issue — keep tokens so a retry can succeed.
           if (!cancelled) setIsLoading(false);
           return;
         }
         try {
-          const refreshed = await authApi.refreshToken(storedRefresh);
+          const refreshed = await authApi.refreshToken();
           if (cancelled) return;
-          writeTokens(refreshed.access_token, refreshed.refresh_token);
           setUser(refreshed.user);
-          setAccessToken(refreshed.access_token);
+          setAccessToken(COOKIE_SESSION);
         } catch {
-          if (cancelled) return;
-          clearTokens();
+          // No valid refresh cookie.
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -99,37 +86,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback((resp: AuthResponse) => {
-    writeTokens(resp.access_token, resp.refresh_token);
     setUser(resp.user);
-    setAccessToken(resp.access_token);
+    setAccessToken(COOKIE_SESSION);
   }, []);
 
   const logout = useCallback(async () => {
-    const { accessToken: tok } = readTokens();
-    if (tok) {
-      // Best-effort — even if the request fails, we wipe local state.
-      try {
-        await authApi.logout(tok);
-      } catch {
-        /* ignore */
-      }
+    try {
+      await authApi.logout(COOKIE_SESSION);
+    } catch {
+      /* clear local profile even if the network request failed */
     }
-    clearTokens();
     setUser(null);
     setAccessToken(null);
   }, []);
 
   const refreshSession = useCallback(async (): Promise<boolean> => {
-    const { refreshToken } = readTokens();
-    if (!refreshToken) return false;
     try {
-      const r = await authApi.refreshToken(refreshToken);
-      writeTokens(r.access_token, r.refresh_token);
+      const r = await authApi.refreshToken();
       setUser(r.user);
-      setAccessToken(r.access_token);
+      setAccessToken(COOKIE_SESSION);
       return true;
     } catch {
-      clearTokens();
       setUser(null);
       setAccessToken(null);
       return false;
@@ -137,20 +114,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshProfile = useCallback(async (): Promise<UserProfile | null> => {
-    const { accessToken: tok } = readTokens();
-    if (!tok) return null;
     try {
-      const profile = await authApi.getProfile(tok);
+      const profile = await authApi.getProfile(COOKIE_SESSION);
       setUser(profile);
       return profile;
     } catch (err) {
       if (err instanceof ApiRequestError && err.status === 401) {
         const ok = await refreshSession();
         if (!ok) return null;
-        const fresh = readTokens().accessToken;
-        if (!fresh) return null;
         try {
-          const p = await authApi.getProfile(fresh);
+          const p = await authApi.getProfile(COOKIE_SESSION);
           setUser(p);
           return p;
         } catch {

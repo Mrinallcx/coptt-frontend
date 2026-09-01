@@ -114,14 +114,69 @@ export class ApiRequestError extends Error {
 
 // --- Core helpers ---
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+let refreshInFlight: Promise<boolean> | null = null;
+
+function mayRefresh(path: string): boolean {
+  return [
+    "/auth/me",
+    "/auth/logout",
+    "/auth/2fa/setup",
+    "/auth/2fa/verify-setup",
+    "/auth/2fa/disable",
+    "/kyc/",
+    "/wallets/",
+    "/coptt/mint",
+    "/admin/",
+    "/invest/",
+  ].some((prefix) => path.startsWith(prefix));
+}
+
+async function refreshCookieSession(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = fetch(`${API_BASE}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: "{}",
+    })
+      .then((res) => res.ok)
+      .catch(() => false)
+      .finally(() => {
+        refreshInFlight = null;
+      });
+  }
+  return refreshInFlight;
+}
+
+async function request<T>(
+  path: string,
+  options: RequestInit = {},
+  allowRefresh = true,
+): Promise<T> {
   const url = `${API_BASE}${path}`;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...((options.headers as Record<string, string>) ?? {}),
   };
 
-  const res = await fetch(url, { ...options, headers });
+  let res = await fetch(url, {
+    ...options,
+    headers,
+    credentials: "include",
+  });
+
+  if (
+    res.status === 401 &&
+    allowRefresh &&
+    mayRefresh(path) &&
+    (await refreshCookieSession())
+  ) {
+    res = await fetch(url, {
+      ...options,
+      headers,
+      credentials: "include",
+    });
+  }
 
   if (!res.ok) {
     const payload: ApiError = await res
@@ -138,7 +193,12 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return res.json();
 }
 
-function authed(token: string, init: RequestInit = {}): RequestInit {
+function authed(_token: string, init: RequestInit = {}): RequestInit {
+  // Production access tokens live only in an HttpOnly cookie.
+  return init;
+}
+
+function bearer(token: string, init: RequestInit = {}): RequestInit {
   return {
     ...init,
     headers: {
@@ -172,10 +232,13 @@ export const authApi = {
     });
   },
 
-  setup2FA(accessToken: string) {
+	setup2FA(accessToken: string, password: string) {
     return request<TOTPSetupResponse>(
       "/auth/2fa/setup",
-      authed(accessToken, { method: "POST" }),
+      authed(accessToken, {
+        method: "POST",
+        body: JSON.stringify({ password }),
+      }),
     );
   },
 
@@ -192,19 +255,19 @@ export const authApi = {
   verify2FALogin(tempToken: string, code: string) {
     return request<AuthResponse>(
       "/auth/2fa/verify",
-      authed(tempToken, {
+      bearer(tempToken, {
         method: "POST",
         body: JSON.stringify({ code }),
       }),
     );
   },
 
-  disable2FA(accessToken: string, code: string) {
+  disable2FA(accessToken: string, code: string, password: string) {
     return request<UserProfile>(
       "/auth/2fa/disable",
       authed(accessToken, {
         method: "POST",
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code, password }),
       }),
     );
   },
@@ -214,10 +277,10 @@ export const authApi = {
     return request<{ message: string }>(`/auth/verify-email?${qs}`);
   },
 
-  refreshToken(refreshToken: string) {
+  refreshToken(refreshToken = "") {
     return request<AuthResponse>("/auth/refresh", {
       method: "POST",
-      body: JSON.stringify({ refresh_token: refreshToken }),
+      body: JSON.stringify(refreshToken ? { refresh_token: refreshToken } : {}),
     });
   },
 

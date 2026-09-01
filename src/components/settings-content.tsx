@@ -149,6 +149,7 @@ export function SettingsContent() {
   const [setupQR, setSetupQR] = React.useState<string | null>(null)
   const [setupSecret, setSetupSecret] = React.useState<string | null>(null)
   const [totpCode, setTotpCode] = React.useState("")
+  const [accountPassword, setAccountPassword] = React.useState("")
   const [twoFABusy, setTwoFABusy] = React.useState(false)
   const [twoFAError, setTwoFAError] = React.useState<string | null>(null)
 
@@ -156,16 +157,19 @@ export function SettingsContent() {
 
   async function startTwoFASetup() {
     if (!accessToken) return
+    if (!accountPassword) {
+      setTwoFAError("Confirm your account password to continue.")
+      return
+    }
     setTwoFAError(null)
     setTwoFABusy(true)
     try {
-      const setup = await authApi.setup2FA(accessToken)
+      const setup = await authApi.setup2FA(accessToken, accountPassword)
       setSetupQR(setup.qr_png_base64)
       setSetupSecret(setup.secret)
       setTotpCode("")
-      setShowTwoFASetup(true)
     } catch (err) {
-      toast.error(
+      setTwoFAError(
         err instanceof ApiRequestError
           ? err.backendMessage || err.message
           : "Could not start two-factor setup.",
@@ -191,6 +195,7 @@ export function SettingsContent() {
       setSetupQR(null)
       setSetupSecret(null)
       setTotpCode("")
+      setAccountPassword("")
       toast.success("Two-factor authentication enabled")
     } catch (err) {
       setTwoFAError(
@@ -210,13 +215,18 @@ export function SettingsContent() {
       setTwoFAError("Enter the 6-digit code from your authenticator app.")
       return
     }
+    if (!accountPassword) {
+      setTwoFAError("Confirm your account password to continue.")
+      return
+    }
     setTwoFABusy(true)
     setTwoFAError(null)
     try {
-      await authApi.disable2FA(accessToken, code)
+      await authApi.disable2FA(accessToken, code, accountPassword)
       await refreshProfile()
       setShowTwoFADisable(false)
       setTotpCode("")
+      setAccountPassword("")
       toast.success("Two-factor authentication disabled")
     } catch (err) {
       setTwoFAError(
@@ -310,7 +320,16 @@ export function SettingsContent() {
             </div>
           </div>
           {!twoFAEnabled && !showTwoFASetup ? (
-            <Button size="sm" variant="outline" onClick={startTwoFASetup} disabled={twoFABusy || !accessToken}>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!accessToken}
+              onClick={() => {
+                setTwoFAError(null)
+                setAccountPassword("")
+                setShowTwoFASetup(true)
+              }}
+            >
               Set up
             </Button>
           ) : twoFAEnabled && !showTwoFADisable ? (
@@ -320,6 +339,7 @@ export function SettingsContent() {
               onClick={() => {
                 setTwoFAError(null)
                 setTotpCode("")
+                setAccountPassword("")
                 setShowTwoFADisable(true)
               }}
             >
@@ -332,41 +352,62 @@ export function SettingsContent() {
           <>
             <Separator />
             <div className="space-y-3 px-4 py-4">
-              <p className="text-xs text-muted-foreground">
-                Scan with Google Authenticator, then enter your 6-digit code.
-              </p>
-              {setupQR ? (
-                <img
-                  src={`data:image/png;base64,${setupQR}`}
-                  alt="Authenticator QR code"
-                  width={160}
-                  height={160}
-                  className="rounded-md border bg-white p-2"
-                />
-              ) : null}
-              {setupSecret ? (
-                <p className="break-all font-mono text-xs text-muted-foreground">
-                  Can&apos;t scan? Enter this key: {setupSecret}
-                </p>
-              ) : null}
-              {twoFAError ? (
-                <p className="text-xs text-destructive">{twoFAError}</p>
-              ) : null}
-              <div className="flex gap-2">
-                <Input
-                  id="totp"
-                  placeholder="000000"
-                  maxLength={6}
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  value={totpCode}
-                  onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  className="font-mono tracking-widest"
-                />
-                <Button size="sm" onClick={confirmTwoFASetup} disabled={twoFABusy}>
-                  Enable
-                </Button>
-              </div>
+              {!setupQR ? (
+                <>
+                  <p className="text-xs text-muted-foreground">
+                    Confirm your password to generate an authenticator key.
+                  </p>
+                  {twoFAError ? (
+                    <p className="text-xs text-destructive">{twoFAError}</p>
+                  ) : null}
+                  <Input
+                    type="password"
+                    autoComplete="current-password"
+                    placeholder="Account password"
+                    value={accountPassword}
+                    onChange={(e) => setAccountPassword(e.target.value)}
+                  />
+                  <Button size="sm" onClick={startTwoFASetup} disabled={twoFABusy}>
+                    Continue
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-muted-foreground">
+                    Scan with Google Authenticator, then enter your 6-digit code.
+                  </p>
+                  <img
+                    src={`data:image/png;base64,${setupQR}`}
+                    alt="Authenticator QR code"
+                    width={160}
+                    height={160}
+                    className="rounded-md border bg-white p-2"
+                  />
+                  {setupSecret ? (
+                    <p className="break-all font-mono text-xs text-muted-foreground">
+                      Can&apos;t scan? Enter this key: {setupSecret}
+                    </p>
+                  ) : null}
+                  {twoFAError ? (
+                    <p className="text-xs text-destructive">{twoFAError}</p>
+                  ) : null}
+                  <div className="flex gap-2">
+                    <Input
+                      id="totp"
+                      placeholder="000000"
+                      maxLength={6}
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      value={totpCode}
+                      onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      className="font-mono tracking-widest"
+                    />
+                    <Button size="sm" onClick={confirmTwoFASetup} disabled={twoFABusy}>
+                      Enable
+                    </Button>
+                  </div>
+                </>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -376,6 +417,7 @@ export function SettingsContent() {
                   setSetupQR(null)
                   setSetupSecret(null)
                   setTotpCode("")
+                  setAccountPassword("")
                   setTwoFAError(null)
                 }}
               >
@@ -390,11 +432,18 @@ export function SettingsContent() {
             <Separator />
             <div className="space-y-3 px-4 py-4">
               <p className="text-xs text-muted-foreground">
-                Enter a current authenticator code to turn 2FA off.
+                Enter your password and a current authenticator code to turn 2FA off.
               </p>
               {twoFAError ? (
                 <p className="text-xs text-destructive">{twoFAError}</p>
               ) : null}
+              <Input
+                type="password"
+                autoComplete="current-password"
+                placeholder="Account password"
+                value={accountPassword}
+                onChange={(e) => setAccountPassword(e.target.value)}
+              />
               <div className="flex gap-2">
                 <Input
                   id="totp-disable"
@@ -417,6 +466,7 @@ export function SettingsContent() {
                 onClick={() => {
                   setShowTwoFADisable(false)
                   setTotpCode("")
+                  setAccountPassword("")
                   setTwoFAError(null)
                 }}
               >

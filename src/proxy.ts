@@ -13,10 +13,9 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 
-// Must match the name auth-storage.ts writes. Keep this list in sync if
-// you ever rename — middleware can't import client-only code (it runs in
-// the edge runtime), hence the duplicated constant.
+// Must match the HttpOnly cookie written by the Go auth backend.
 const AUTH_COOKIE_NAME = "coptt_at";
+const SESSION_COOKIE_NAME = "coptt_session";
 
 // Page-level groups proxy cares about. Anything not in these lists is
 // treated as public — `/auth/verify`, `/auth/forgot-password` etc. need
@@ -26,7 +25,12 @@ const AUTH_PREFIXES = ["/login", "/signup"];
 
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const hasAuth = req.cookies.get(AUTH_COOKIE_NAME)?.value;
+  // The marker keeps page navigation alive while the short access cookie is
+  // being refreshed. It is not authorization; every API route validates the
+  // signed HttpOnly token and its DB session.
+  const hasAuth =
+    req.cookies.get(AUTH_COOKIE_NAME)?.value ||
+    req.cookies.get(SESSION_COOKIE_NAME)?.value;
 
   if (PROTECTED_PREFIXES.some((p) => pathname.startsWith(p)) && !hasAuth) {
     const url = req.nextUrl.clone();
