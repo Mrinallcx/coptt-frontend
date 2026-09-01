@@ -52,6 +52,7 @@ export function LoginForm({
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [tempToken, setTempToken] = useState<string | null>(null)
+  const [code, setCode] = useState("")
 
   async function finishLogin(resp: Parameters<typeof login>[0]) {
     login(resp)
@@ -65,7 +66,6 @@ export function LoginForm({
     const data = new FormData(e.currentTarget)
 
     if (tempToken) {
-      const code = String(data.get("code") || "").replace(/\D/g, "")
       if (code.length !== 6) {
         setError("Enter the 6-digit code from your authenticator app.")
         return
@@ -98,6 +98,7 @@ export function LoginForm({
     try {
       const resp = await authApi.login(email, password)
       if (isTwoFactorChallenge(resp)) {
+        setCode("")
         setTempToken(resp.temp_token)
         return
       }
@@ -138,7 +139,9 @@ export function LoginForm({
           )}
           <form onSubmit={onSubmit}>
             {tempToken ? (
-              <FieldGroup>
+              // Keyed so React remounts instead of reusing the email input's
+              // DOM node, which would carry the typed email into this field.
+              <FieldGroup key="totp">
                 <Field>
                   <FieldLabel htmlFor="code">Code</FieldLabel>
                   <Input
@@ -149,6 +152,8 @@ export function LoginForm({
                     placeholder="000000"
                     maxLength={6}
                     className="font-mono tracking-widest"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                     autoFocus
                     required
                   />
@@ -171,6 +176,7 @@ export function LoginForm({
                     onClick={() => {
                       setTempToken(null)
                       setError(null)
+                      setCode("")
                     }}
                   >
                     Back to sign in
@@ -178,7 +184,7 @@ export function LoginForm({
                 </Field>
               </FieldGroup>
             ) : (
-              <FieldGroup>
+              <FieldGroup key="credentials">
                 <Field>
                   <FieldLabel htmlFor="email">Email</FieldLabel>
                   <Input
