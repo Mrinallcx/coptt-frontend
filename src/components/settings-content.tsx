@@ -25,7 +25,7 @@ import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
 import { countryName } from "@/lib/countries"
-import type { KYCStatus } from "@/lib/api"
+import { ApiRequestError, authApi, type KYCStatus } from "@/lib/api"
 
 type KYCUi = {
   label: string
@@ -138,14 +138,96 @@ function KycStatusIcon({ tone }: { tone: KYCUi["tone"] }) {
 
 export function SettingsContent() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, accessToken, refreshProfile } = useAuth()
   const [notifications, setNotifications] = React.useState({
     email: true,
     push: false,
     sms: false,
   })
-  const [twoFAEnabled, setTwoFAEnabled] = React.useState(false)
   const [showTwoFASetup, setShowTwoFASetup] = React.useState(false)
+  const [showTwoFADisable, setShowTwoFADisable] = React.useState(false)
+  const [setupQR, setSetupQR] = React.useState<string | null>(null)
+  const [setupSecret, setSetupSecret] = React.useState<string | null>(null)
+  const [totpCode, setTotpCode] = React.useState("")
+  const [twoFABusy, setTwoFABusy] = React.useState(false)
+  const [twoFAError, setTwoFAError] = React.useState<string | null>(null)
+
+  const twoFAEnabled = Boolean(user?.totp_enabled)
+
+  async function startTwoFASetup() {
+    if (!accessToken) return
+    setTwoFAError(null)
+    setTwoFABusy(true)
+    try {
+      const setup = await authApi.setup2FA(accessToken)
+      setSetupQR(setup.qr_png_base64)
+      setSetupSecret(setup.secret)
+      setTotpCode("")
+      setShowTwoFASetup(true)
+    } catch (err) {
+      toast.error(
+        err instanceof ApiRequestError
+          ? err.backendMessage || err.message
+          : "Could not start two-factor setup.",
+      )
+    } finally {
+      setTwoFABusy(false)
+    }
+  }
+
+  async function confirmTwoFASetup() {
+    if (!accessToken) return
+    const code = totpCode.replace(/\D/g, "")
+    if (code.length !== 6) {
+      setTwoFAError("Enter the 6-digit code from your authenticator app.")
+      return
+    }
+    setTwoFABusy(true)
+    setTwoFAError(null)
+    try {
+      await authApi.verify2FASetup(accessToken, code)
+      await refreshProfile()
+      setShowTwoFASetup(false)
+      setSetupQR(null)
+      setSetupSecret(null)
+      setTotpCode("")
+      toast.success("Two-factor authentication enabled")
+    } catch (err) {
+      setTwoFAError(
+        err instanceof ApiRequestError
+          ? err.backendMessage || err.message
+          : "Could not verify that code.",
+      )
+    } finally {
+      setTwoFABusy(false)
+    }
+  }
+
+  async function confirmTwoFADisable() {
+    if (!accessToken) return
+    const code = totpCode.replace(/\D/g, "")
+    if (code.length !== 6) {
+      setTwoFAError("Enter the 6-digit code from your authenticator app.")
+      return
+    }
+    setTwoFABusy(true)
+    setTwoFAError(null)
+    try {
+      await authApi.disable2FA(accessToken, code)
+      await refreshProfile()
+      setShowTwoFADisable(false)
+      setTotpCode("")
+      toast.success("Two-factor authentication disabled")
+    } catch (err) {
+      setTwoFAError(
+        err instanceof ApiRequestError
+          ? err.backendMessage || err.message
+          : "Could not disable two-factor authentication.",
+      )
+    } finally {
+      setTwoFABusy(false)
+    }
+  }
 
   const kyc = kycUi[user?.kyc_status ?? "none"]
   const displayName = user?.name?.trim() || user?.email?.split("@")[0] || "Investor"
@@ -228,16 +310,17 @@ export function SettingsContent() {
             </div>
           </div>
           {!twoFAEnabled && !showTwoFASetup ? (
-            <Button size="sm" variant="outline" onClick={() => setShowTwoFASetup(true)}>
+            <Button size="sm" variant="outline" onClick={startTwoFASetup} disabled={twoFABusy || !accessToken}>
               Set up
             </Button>
-          ) : twoFAEnabled ? (
+          ) : twoFAEnabled && !showTwoFADisable ? (
             <Button
               size="sm"
               variant="outline"
               onClick={() => {
-                setTwoFAEnabled(false)
-                setShowTwoFASetup(false)
+                setTwoFAError(null)
+                setTotpCode("")
+                setShowTwoFADisable(true)
               }}
             >
               Disable
@@ -252,14 +335,35 @@ export function SettingsContent() {
               <p className="text-xs text-muted-foreground">
                 Scan with Google Authenticator, then enter your 6-digit code.
               </p>
+              {setupQR ? (
+                <img
+                  src={`data:image/png;base64,${setupQR}`}
+                  alt="Authenticator QR code"
+                  width={160}
+                  height={160}
+                  className="rounded-md border bg-white p-2"
+                />
+              ) : null}
+              {setupSecret ? (
+                <p className="break-all font-mono text-xs text-muted-foreground">
+                  Can&apos;t scan? Enter this key: {setupSecret}
+                </p>
+              ) : null}
+              {twoFAError ? (
+                <p className="text-xs text-destructive">{twoFAError}</p>
+              ) : null}
               <div className="flex gap-2">
                 <Input
                   id="totp"
                   placeholder="000000"
                   maxLength={6}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={totpCode}
+                  onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                   className="font-mono tracking-widest"
                 />
-                <Button size="sm" onClick={() => setTwoFAEnabled(true)}>
+                <Button size="sm" onClick={confirmTwoFASetup} disabled={twoFABusy}>
                   Enable
                 </Button>
               </div>
@@ -267,7 +371,54 @@ export function SettingsContent() {
                 variant="ghost"
                 size="sm"
                 className="h-auto px-0 text-muted-foreground"
-                onClick={() => setShowTwoFASetup(false)}
+                onClick={() => {
+                  setShowTwoFASetup(false)
+                  setSetupQR(null)
+                  setSetupSecret(null)
+                  setTotpCode("")
+                  setTwoFAError(null)
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </>
+        ) : null}
+
+        {showTwoFADisable && twoFAEnabled ? (
+          <>
+            <Separator />
+            <div className="space-y-3 px-4 py-4">
+              <p className="text-xs text-muted-foreground">
+                Enter a current authenticator code to turn 2FA off.
+              </p>
+              {twoFAError ? (
+                <p className="text-xs text-destructive">{twoFAError}</p>
+              ) : null}
+              <div className="flex gap-2">
+                <Input
+                  id="totp-disable"
+                  placeholder="000000"
+                  maxLength={6}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={totpCode}
+                  onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  className="font-mono tracking-widest"
+                />
+                <Button size="sm" onClick={confirmTwoFADisable} disabled={twoFABusy}>
+                  Confirm
+                </Button>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-auto px-0 text-muted-foreground"
+                onClick={() => {
+                  setShowTwoFADisable(false)
+                  setTotpCode("")
+                  setTwoFAError(null)
+                }}
               >
                 Cancel
               </Button>
@@ -301,15 +452,6 @@ export function SettingsContent() {
               />
             </div>
           ))}
-        </div>
-        <div className="flex justify-end border-t px-4 py-3">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => toast.success("Notification preferences saved")}
-          >
-            Save
-          </Button>
         </div>
       </SettingsBlock>
     </div>

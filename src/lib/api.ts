@@ -37,6 +37,7 @@ export interface UserProfile {
   email_verified: boolean;
   role: UserRole;
   kyc_status: KYCStatus;
+  totp_enabled?: boolean;
 }
 
 export interface AuthResponse {
@@ -45,6 +46,26 @@ export interface AuthResponse {
   token_type: "Bearer";
   expires_in: number;
   user: UserProfile;
+}
+
+export interface TwoFactorChallenge {
+  requires_2fa: true;
+  temp_token: string;
+  token_type: "Bearer";
+  expires_in: number;
+}
+
+export interface TOTPSetupResponse {
+  otpauth_url: string;
+  qr_png_base64: string;
+  secret: string;
+  issuer: string;
+}
+
+export function isTwoFactorChallenge(
+  value: AuthResponse | TwoFactorChallenge,
+): value is TwoFactorChallenge {
+  return "requires_2fa" in value && value.requires_2fa === true;
 }
 
 export interface RegisterResponse {
@@ -145,10 +166,47 @@ export const authApi = {
   },
 
   login(email: string, password: string) {
-    return request<AuthResponse>("/auth/login", {
+    return request<AuthResponse | TwoFactorChallenge>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
+  },
+
+  setup2FA(accessToken: string) {
+    return request<TOTPSetupResponse>(
+      "/auth/2fa/setup",
+      authed(accessToken, { method: "POST" }),
+    );
+  },
+
+  verify2FASetup(accessToken: string, code: string) {
+    return request<UserProfile>(
+      "/auth/2fa/verify-setup",
+      authed(accessToken, {
+        method: "POST",
+        body: JSON.stringify({ code }),
+      }),
+    );
+  },
+
+  verify2FALogin(tempToken: string, code: string) {
+    return request<AuthResponse>(
+      "/auth/2fa/verify",
+      authed(tempToken, {
+        method: "POST",
+        body: JSON.stringify({ code }),
+      }),
+    );
+  },
+
+  disable2FA(accessToken: string, code: string) {
+    return request<UserProfile>(
+      "/auth/2fa/disable",
+      authed(accessToken, {
+        method: "POST",
+        body: JSON.stringify({ code }),
+      }),
+    );
   },
 
   verifyEmail(token: string) {
