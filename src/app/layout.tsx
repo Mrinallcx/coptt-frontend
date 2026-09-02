@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { DisclaimerGate } from "@/components/disclaimer-gate";
 import { AuthProvider } from "@/contexts/auth-context";
 import "./globals.css";
 
@@ -24,6 +25,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <AuthProvider>
           <TooltipProvider>{children}</TooltipProvider>
+          <DisclaimerGate />
           <Toaster />
         </AuthProvider>
       </body>

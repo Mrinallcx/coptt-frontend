@@ -379,6 +379,33 @@ export interface CopperPrice {
   feed_symbol?: string;
 }
 
+/** One point in the recorded price series. `t` is the bucket timestamp. */
+export interface CopperPricePoint {
+  t: string; // ISO8601
+  usd_per_lb: number;
+}
+
+/** Windows `GET /coptt/price/history` accepts. */
+export type CopperPriceRange = "24h" | "7d" | "30d" | "90d" | "1y";
+
+/**
+ * Response from `GET /coptt/price/history`.
+ *
+ * The upstream feed publishes only the current price, so this series is
+ * built from samples the backend has taken since it was first deployed:
+ * an empty `points` array is a normal answer, not a failure. `sources`
+ * says whether the series came from the live feed or the dev mock.
+ */
+export interface CopperPriceHistory {
+  range: CopperPriceRange;
+  bucket_seconds: number;
+  from: string; // ISO8601
+  to: string;   // ISO8601
+  points: CopperPricePoint[];
+  count: number;
+  sources: Array<"pyth_lazer" | "mock"> | null;
+}
+
 /**
  * Server-side mint settings the UI mirrors. Same shape as GET /coptt/config.
  * `require_kyc_for_mint` defaults true on the server (safe). Dev / staging
@@ -398,6 +425,17 @@ export const copttApi = {
    */
   getPrice() {
     return request<CopperPrice>("/coptt/price");
+  },
+
+  /**
+   * Recorded price series for the chart. Public (no auth required).
+   * Coarser ranges come back pre-bucketed, so a response is at most a
+   * few hundred points regardless of window.
+   */
+  getPriceHistory(range: CopperPriceRange = "7d") {
+    return request<CopperPriceHistory>(
+      `/coptt/price/history?range=${encodeURIComponent(range)}`,
+    );
   },
 
   /**

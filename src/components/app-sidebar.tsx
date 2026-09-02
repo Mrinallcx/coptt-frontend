@@ -41,17 +41,22 @@ const data = {
       ),
     },
   ],
-  navSecondary: [
-    {
-      title: "Get Help",
-      url: "#",
-      icon: (
-        <CircleHelpIcon
-        />
-      ),
-    },
-  ],
 }
+
+export const SUPPORT_EMAIL = "support@totofinance.co"
+
+// Support has no way to look a user up from a bare email, so the account
+// address goes in the body when we know who is asking.
+function supportMailto(userEmail?: string): string {
+  const subject = "COPTT portal — support request"
+  const body = userEmail
+    ? `\n\n---\nAccount: ${userEmail}`
+    : ""
+  const query = new URLSearchParams({ subject })
+  if (body) query.set("body", body)
+  return `mailto:${SUPPORT_EMAIL}?${query.toString()}`
+}
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // The signed-in user from auth context. On first render (before
   // AuthProvider's hydration effect has run) it's null — we fall back to
@@ -63,6 +68,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     email: user?.email || "",
     avatar: user?.picture || "",
   }
+
+  const navSecondary = React.useMemo(
+    () => [
+      {
+        title: "Get Help",
+        url: supportMailto(user?.email),
+        icon: <CircleHelpIcon />,
+      },
+    ],
+    [user?.email],
+  )
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -85,7 +101,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <NavSecondary items={navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={sidebarUser} />

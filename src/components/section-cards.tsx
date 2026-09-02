@@ -6,6 +6,7 @@ import { ArrowRightIcon, LockIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { CopperPriceCard } from "@/components/copper-price"
+import { CopperPriceChart } from "@/components/copper-price-chart"
 import { cn } from "@/lib/utils"
 
 type OfferAccent = "copper" | "tin" | "solar" | "estate"
@@ -298,6 +299,7 @@ export function SectionCards() {
   return (
     <div className="flex flex-col gap-4 px-4 lg:px-6">
       <CopperPriceCard />
+      <CopperPriceChart />
       <div className="grid auto-rows-fr grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
         {offers.map((offer, index) => (
           <OfferCardItem key={`${offer.ticker}-${offer.category}-${index}`} {...offer} />
