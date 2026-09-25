@@ -32,7 +32,7 @@ export function CopperPriceCard() {
     if (DEV_BYPASS_AUTH) {
       const now = new Date().toISOString()
       setPrice({
-        usd_per_lb: 4.251,
+        usd_per_lb: 6.5771,
         publish_time: now,
         source: "mock",
         fetched_at: now,

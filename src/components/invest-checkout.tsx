@@ -21,12 +21,10 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import { copttApi } from "@/lib/api"
-import { DEV_BYPASS_AUTH } from "@/lib/dev-bypass-auth"
 import { cn } from "@/lib/utils"
 
-const FALLBACK_USD_PER_LB = 4.251
-const MIN_LBS = 1
+const USD_PER_MT = 14_500
+const MIN_MT = 1
 
 type PayMethod = "wallet" | "bank"
 type Step = "amount" | "pay" | "confirm" | "done"
@@ -58,7 +56,7 @@ function formatUsd(n: number) {
   }).format(n)
 }
 
-function formatLbs(n: number) {
+function formatMt(n: number) {
   return new Intl.NumberFormat("en-US", {
     maximumFractionDigits: 4,
   }).format(n)
@@ -72,59 +70,43 @@ function parseAmount(value: string) {
 export function InvestCheckout() {
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState<Step>("amount")
-  const [price, setPrice] = useState(FALLBACK_USD_PER_LB)
-  const [usdInput, setUsdInput] = useState("1000")
-  const [lbsInput, setLbsInput] = useState(() => (1000 / FALLBACK_USD_PER_LB).toFixed(4))
-  const [lastEdited, setLastEdited] = useState<"usd" | "lbs">("usd")
+  const priceMt = USD_PER_MT
+  const [usdInput, setUsdInput] = useState(USD_PER_MT.toFixed(2))
+  const [mtInput, setMtInput] = useState("1")
+  const [lastEdited, setLastEdited] = useState<"usd" | "mt">("mt")
   const [method, setMethod] = useState<PayMethod>("wallet")
   const [connecting, setConnecting] = useState(false)
   const [wallet, setWallet] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [reference] = useState(() => `COPTT-${Date.now().toString(36).toUpperCase()}`)
 
-  useEffect(() => {
-    if (DEV_BYPASS_AUTH) return
-    let cancelled = false
-    copttApi
-      .getPrice()
-      .then((p) => {
-        if (!cancelled && p.usd_per_lb > 0) setPrice(p.usd_per_lb)
-      })
-      .catch(() => {
-        /* keep fallback */
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
   const usd = parseAmount(usdInput)
-  const lbs = parseAmount(lbsInput)
-  const valid = usd !== null && lbs !== null && lbs >= MIN_LBS
+  const mt = parseAmount(mtInput)
+  const valid = usd !== null && mt !== null && mt >= MIN_MT
 
   const onUsdChange = (value: string) => {
     setLastEdited("usd")
     setUsdInput(value)
     const n = parseAmount(value)
-    setLbsInput(n ? (n / price).toFixed(4) : "")
+    setMtInput(n ? (n / priceMt).toFixed(4) : "")
   }
 
-  const onLbsChange = (value: string) => {
-    setLastEdited("lbs")
-    setLbsInput(value)
+  const onMtChange = (value: string) => {
+    setLastEdited("mt")
+    setMtInput(value)
     const n = parseAmount(value)
-    setUsdInput(n ? (n * price).toFixed(2) : "")
+    setUsdInput(n ? (n * priceMt).toFixed(2) : "")
   }
 
   useEffect(() => {
     if (lastEdited === "usd") {
       const n = parseAmount(usdInput)
-      if (n) setLbsInput((n / price).toFixed(4))
+      if (n) setMtInput((n / priceMt).toFixed(4))
     } else {
-      const n = parseAmount(lbsInput)
-      if (n) setUsdInput((n * price).toFixed(2))
+      const n = parseAmount(mtInput)
+      if (n) setUsdInput((n * priceMt).toFixed(2))
     }
-  }, [price])
+  }, [priceMt])
 
   const reset = useCallback(() => {
     setStep("amount")
@@ -191,7 +173,7 @@ export function InvestCheckout() {
           <div>
             <p className="text-sm font-semibold">Ready to invest?</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              1 COPTT = 1 lb copper · priced from the live index
+              1 COPTT = 1 Mt copper · priced from the live index
             </p>
           </div>
           <Button
@@ -212,7 +194,7 @@ export function InvestCheckout() {
             <SheetDescription>
               {step === "done"
                 ? "You can close this panel."
-                : "Minimum 1 lb · 1 COPTT = 1 lb of copper"}
+                : "Minimum 1 Mt · 1 COPTT = 1 metric ton of copper"}
             </SheetDescription>
           </SheetHeader>
 
@@ -220,7 +202,7 @@ export function InvestCheckout() {
             {step === "amount" ? (
               <div className="space-y-5">
                 <p className="text-xs text-muted-foreground">
-                  Live index {formatUsd(price)} / lb
+                  Price {formatUsd(priceMt)} / Mt
                 </p>
                 <div className="space-y-2">
                   <Label htmlFor="invest-usd">Investment amount (USD)</Label>
@@ -232,19 +214,19 @@ export function InvestCheckout() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="invest-lbs">Copper to purchase (lbs)</Label>
+                  <Label htmlFor="invest-mt">Copper to purchase (Mt)</Label>
                   <Input
-                    id="invest-lbs"
+                    id="invest-mt"
                     inputMode="decimal"
-                    value={lbsInput}
-                    onChange={(e) => onLbsChange(e.target.value)}
+                    value={mtInput}
+                    onChange={(e) => onMtChange(e.target.value)}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Equals {lbs ? formatLbs(lbs) : "—"} COPTT
+                    Equals {mt ? formatMt(mt) : "—"} COPTT
                   </p>
                 </div>
                 {!valid ? (
-                  <p className="text-xs text-destructive">Enter at least 1 lb.</p>
+                  <p className="text-xs text-destructive">Enter at least 1 Mt.</p>
                 ) : null}
               </div>
             ) : null}
@@ -270,7 +252,7 @@ export function InvestCheckout() {
 
             {step === "confirm" && method === "wallet" ? (
               <div className="space-y-4">
-                <Summary usd={usd} lbs={lbs} />
+                <Summary usd={usd} mt={mt} />
                 {wallet ? (
                   <p className="rounded-lg border bg-muted/40 px-3 py-2 text-sm">
                     Connected{" "}
@@ -288,7 +270,7 @@ export function InvestCheckout() {
 
             {step === "confirm" && method === "bank" ? (
               <div className="space-y-4">
-                <Summary usd={usd} lbs={lbs} />
+                <Summary usd={usd} mt={mt} />
                 <dl className="divide-y rounded-lg border text-sm">
                   <BankRow label="Beneficiary" value="Toto Finance AG" />
                   <BankRow label="IBAN" value="CH93 0076 2011 6238 5295 7" />
@@ -311,7 +293,7 @@ export function InvestCheckout() {
                   {method === "wallet" ? "Wallet payment recorded" : "Transfer instructions saved"}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {formatUsd(usd ?? 0)} for {formatLbs(lbs ?? 0)} lb COPTT
+                  {formatUsd(usd ?? 0)} for {formatMt(mt ?? 0)} Mt COPTT
                   {method === "bank" ? ` · ${reference}` : ""}
                 </p>
               </div>
@@ -379,12 +361,12 @@ export function InvestCheckout() {
   )
 }
 
-function Summary({ usd, lbs }: { usd: number | null; lbs: number | null }) {
+function Summary({ usd, mt }: { usd: number | null; mt: number | null }) {
   return (
     <div className="rounded-lg border bg-muted/30 px-3 py-3 text-sm">
       <p className="font-semibold tabular-nums">{usd ? formatUsd(usd) : "—"}</p>
       <p className="mt-1 text-xs text-muted-foreground">
-        {lbs ? `${formatLbs(lbs)} lb · ${formatLbs(lbs)} COPTT` : "—"}
+        {mt ? `${formatMt(mt)} Mt · ${formatMt(mt)} COPTT` : "—"}
       </p>
     </div>
   )

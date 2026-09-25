@@ -28,6 +28,8 @@ type OfferCard = {
   minInvestment?: string
   issueDate?: string
   comingSoon?: boolean
+  futureProduction?: boolean
+  coverImage?: string
   specs?: OfferSpec[]
 }
 
@@ -125,6 +127,8 @@ function OfferCardItem({
   minInvestment,
   issueDate,
   comingSoon,
+  futureProduction,
+  coverImage,
   specs,
 }: OfferCard) {
   const isLive = !!href && !comingSoon
@@ -134,22 +138,38 @@ function OfferCardItem({
   return (
     <article
       className={cn(
-        "group relative flex h-full flex-col overflow-hidden rounded-2xl border transition-[box-shadow,border-color] duration-200",
+        "group relative flex h-full w-full flex-col overflow-hidden rounded-2xl border transition-[box-shadow,border-color] duration-200",
         styles.shell,
       )}
     >
       <div className={cn("absolute inset-0", styles.glow)} aria-hidden />
+      <div className="relative h-40 w-full shrink-0">
+        {coverImage ? (
+          <img
+            src={coverImage}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div
+            className={cn(
+              "h-full w-full",
+              isLive ? "bg-amber-100 dark:bg-amber-950/40" : "bg-zinc-100 dark:bg-zinc-800/80",
+            )}
+          />
+        )}
+      </div>
       <div
-        className={cn("relative h-1.5 w-full bg-gradient-to-r", styles.bar)}
+        className={cn("relative h-1 w-full bg-gradient-to-r", styles.bar)}
         aria-hidden
       />
 
-      <div className="relative flex flex-1 flex-col p-5">
+      <div className="relative flex flex-1 flex-col px-4 py-5">
         <header className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p
               className={cn(
-                "text-[11px] font-semibold uppercase tracking-[0.14em]",
+                "text-[10px] font-semibold uppercase tracking-[0.14em]",
                 styles.label,
               )}
             >
@@ -157,16 +177,20 @@ function OfferCardItem({
             </p>
             <h3
               className={cn(
-                "mt-2 font-heading text-2xl font-semibold tracking-tight",
+                "mt-1 font-heading text-xl font-semibold tracking-tight",
                 styles.title,
               )}
             >
               {ticker}
             </h3>
-            <p className={cn("mt-0.5 text-sm", styles.subtitle)}>{subtitle}</p>
+            <p className={cn("text-xs", styles.subtitle)}>{subtitle}</p>
           </div>
 
-          {comingSoon ? (
+          {futureProduction ? (
+            <span className="inline-flex shrink-0 items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-400">
+              Future production
+            </span>
+          ) : comingSoon ? (
             <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-zinc-200 bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
               <LockIcon className="size-3" />
               Soon
@@ -180,15 +204,15 @@ function OfferCardItem({
         </header>
 
         {hasSpecs && specs ? (
-          <dl className={cn("mt-4 divide-y", styles.divider)}>
+          <dl className={cn("mt-3 divide-y", styles.divider)}>
             {specs.map((spec) => (
               <div
                 key={spec.label}
-                className="grid grid-cols-[8.5rem_1fr] gap-3 py-2.5 first:pt-0 last:pb-0"
+                className="grid grid-cols-[6.75rem_1fr] gap-2 py-2 first:pt-0 last:pb-0"
               >
                 <dt
                   className={cn(
-                    "text-[11px] font-medium uppercase tracking-wide",
+                    "text-[10px] font-medium uppercase tracking-wide",
                     isLive
                       ? "text-muted-foreground"
                       : "text-zinc-400 dark:text-zinc-500",
@@ -196,7 +220,7 @@ function OfferCardItem({
                 >
                   {spec.label}
                 </dt>
-                <dd className={cn("text-sm leading-snug", styles.stat)}>{spec.value}</dd>
+                <dd className={cn("text-xs leading-snug", styles.stat)}>{spec.value}</dd>
               </div>
             ))}
           </dl>
@@ -244,11 +268,7 @@ function OfferCardItem({
         )}
 
         <footer
-          className={cn(
-            "flex flex-col gap-3 border-t pt-4",
-            hasSpecs ? "mt-auto" : "mt-4",
-            styles.divider,
-          )}
+          className={cn("mt-auto flex flex-col gap-2 border-t pt-3", styles.divider)}
         >
           {issueDate ? (
             <p className="text-xs text-muted-foreground">Issue {issueDate}</p>
@@ -257,7 +277,6 @@ function OfferCardItem({
           {isLive ? (
             <Button
               className="w-full bg-[#B87333] text-white hover:bg-[#9A5B2E] dark:bg-[#B87333] dark:hover:bg-[#CD7F32]"
-              size="lg"
               nativeButton={false}
               render={<Link href={href} />}
             >
@@ -267,7 +286,6 @@ function OfferCardItem({
           ) : (
             <Button
               className="w-full border-zinc-200 bg-zinc-100 text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-400"
-              size="lg"
               variant="outline"
               disabled
             >
@@ -291,6 +309,7 @@ export function SectionCards() {
         "LME Grade A copper cathode held in an LME-listed bonded warehouse in New Orleans.",
       href: "/offers/coptt",
       accent: "copper",
+      coverImage: "/copper-vault.jpg",
       specs: [
         {
           label: "Underlying",
@@ -308,22 +327,23 @@ export function SectionCards() {
         },
         {
           label: "Available",
-          value: "[X,000 tonnes] — confirm from current warrant inventory",
+          value: "[X,000 Mt] — confirm from current warrant inventory",
         },
         {
           label: "Min. ticket",
-          value: "1 COPTTT (1 lb) — institutional minimums per Reg D 506(b)/Reg S",
+          value: "1 COPTT (1 Mt) — institutional minimums per Reg D 506(b)/Reg S",
         },
       ],
     },
     {
-      ticker: "COPTTT",
+      ticker: "COPTT",
       subtitle: "Rotterdam Vault",
       category: "Commodities",
       description:
         "LME Grade A copper cathode held in an LME-listed bonded warehouse in Rotterdam.",
+      href: "/offers/coptt",
       accent: "copper",
-      comingSoon: true,
+      coverImage: "/copper-pipes.jpg",
       specs: [
         {
           label: "Underlying",
@@ -336,49 +356,16 @@ export function SectionCards() {
         },
         {
           label: "Live price",
-          value: "LME Cash Settlement + Rotterdam in-warehouse premium (oracle-fed)",
+          value:
+            "LME Cash Settlement + Rotterdam in-warehouse premium (oracle-fed, real-time)",
         },
         {
           label: "Available",
-          value: "[X,000 tonnes]",
+          value: "[X,000 Mt] — confirm from current warrant inventory",
         },
         {
           label: "Min. ticket",
-          value: "1 COPTTT (1 lb)",
-        },
-      ],
-    },
-    {
-      ticker: "COPTtr",
-      subtitle: "Los Azules, Argentina",
-      category: "Commodities",
-      description:
-        "Tokenized exposure to the Los Azules open-pit copper deposit in San Juan Province, Argentina.",
-      accent: "copper",
-      comingSoon: true,
-      specs: [
-        {
-          label: "Deposit",
-          value:
-            "Los Azules, San Juan Province — open-pit, heap-leach/SX-EW porphyry copper",
-        },
-        {
-          label: "Mining partner",
-          value:
-            "McEwen Copper Inc. (subsidiary of McEwen Inc., NYSE/TSX: MUX)",
-        },
-        {
-          label: "Stage",
-          value: "Pre-production — feasibility complete, FID targeted late 2026",
-        },
-        {
-          label: "Exposure",
-          value:
-            "500,000 tonnes physical copper (~$5B+ notional at current pricing)",
-        },
-        {
-          label: "First production",
-          value: "2030",
+          value: "1 COPTT (1 Mt) — institutional minimums per Reg D 506(b)/Reg S",
         },
       ],
     },
@@ -390,53 +377,75 @@ export function SectionCards() {
         "Tokenized exposure to the Kamoa-Kakula high-grade underground copper mine in the DRC.",
       accent: "copper",
       comingSoon: true,
+      futureProduction: true,
+      coverImage: "/copper-rack.jpg",
       specs: [
         {
           label: "Deposit",
-          value:
-            "Kamoa-Kakula, Kolwezi district, Lualaba Province, DRC — high-grade underground",
+          value: "Kamoa-Kakula, Kolwezi, DRC — high-grade underground",
         },
         {
           label: "Mining partner",
-          value:
-            "Ivanhoe Mines (indirect 39.6%) / Zijin Mining (indirect 39.6%), operated via Kamoa Holding",
+          value: "Ivanhoe Mines / Zijin Mining (39.6% each)",
         },
         {
-          label: "Stage",
-          value: "Active production, ramping — not pre-production like Los Azules",
+          label: "Future production",
+          value: "First delivery May 2027",
         },
         {
           label: "Exposure",
-          value: "[TBD — to be set once mandate is executed]",
+          value: "[TBD — once mandate is executed]",
         },
         {
           label: "Run-rate",
-          value:
-            "~290,000–330,000 t/y (2026 guidance), scaling toward 500,000+ t/y from 2028",
+          value: "~290,000–330,000 Mt/y, scaling to 500,000+ Mt/y from 2028",
+        },
+      ],
+    },
+    {
+      ticker: "COPTTR",
+      subtitle: "Los Azules, Argentina",
+      category: "Commodities",
+      description:
+        "Tokenized exposure to the Los Azules open-pit copper deposit in San Juan Province, Argentina.",
+      accent: "copper",
+      comingSoon: true,
+      futureProduction: true,
+      coverImage: "/copper-shelf.jpg",
+      specs: [
+        {
+          label: "Deposit",
+          value: "Los Azules, San Juan — open-pit heap-leach/SX-EW copper",
+        },
+        {
+          label: "Mining partner",
+          value: "McEwen Copper Inc. (NYSE/TSX: MUX)",
+        },
+        {
+          label: "Future production",
+          value: "Starting delivery Sep 2030",
+        },
+        {
+          label: "Exposure",
+          value: "500,000 Mt physical copper (~$7.25B at $14,500/Mt)",
+        },
+        {
+          label: "Stage",
+          value: "Pre-production — FID targeted late 2026",
         },
       ],
     },
   ]
 
-  const featuredOffers = offers.slice(0, 3)
-  const nextOffers = offers.slice(3)
-
   return (
     <div className="flex flex-col gap-8 px-4 lg:px-6">
       <CopperPriceCard />
       <CopperPriceChart />
-      <div className="grid auto-rows-fr grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-3">
-        {featuredOffers.map((offer, index) => (
+      <div className="grid auto-rows-fr grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
+        {offers.map((offer, index) => (
           <OfferCardItem key={`${offer.ticker}-${offer.category}-${index}`} {...offer} />
         ))}
       </div>
-      {nextOffers.length > 0 ? (
-        <div className="grid auto-rows-fr grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-3">
-          {nextOffers.map((offer, index) => (
-            <OfferCardItem key={`${offer.ticker}-${offer.category}-${index + 3}`} {...offer} />
-          ))}
-        </div>
-      ) : null}
     </div>
   )
 }

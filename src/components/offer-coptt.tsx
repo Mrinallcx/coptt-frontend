@@ -23,7 +23,7 @@ const TERMS: { label: string; value: string; highlight?: boolean }[] = [
 ]
 
 const HIGHLIGHTS = [
-  "1 COPTT = 1 lb of LME Grade A copper, in-ground reserves",
+  "1 COPTT = 1 Mt of LME Grade A copper, in-ground reserves",
   "Backed by geological certification and a third-party reserve audit",
   "ERC-20 on Ethereum — transparent supply, on-chain audit trail",
   "Optional physical redemption for institutional holders",
