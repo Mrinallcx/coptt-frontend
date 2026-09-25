@@ -3,7 +3,7 @@
 // go back to the real cookie gate.
 import type { UserProfile } from "@/lib/api";
 
-export const DEV_BYPASS_AUTH = false;
+export const DEV_BYPASS_AUTH = true;
 
 export const DEV_BYPASS_USER: UserProfile = {
   id: "dev-bypass",
