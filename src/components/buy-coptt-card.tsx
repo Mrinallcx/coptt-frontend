@@ -62,6 +62,8 @@ const SEPOLIA_PARAMS = {
 
 interface EthereumProvider {
   isMetaMask?: boolean
+  isPhantom?: boolean
+  providers?: EthereumProvider[]
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>
   on?: (event: string, handler: (...args: unknown[]) => void) => void
   removeListener?: (event: string, handler: (...args: unknown[]) => void) => void
@@ -73,9 +75,27 @@ declare global {
   }
 }
 
+function getInjectedProviders(): EthereumProvider[] {
+  if (typeof window === "undefined") return []
+  const eth = window.ethereum
+  if (!eth) return []
+  if (Array.isArray(eth.providers) && eth.providers.length > 0) {
+    return eth.providers
+  }
+  return [eth]
+}
+
+// Prefer MetaMask. Phantom often claims window.ethereum (and spoofs
+// isMetaMask), so talking to the default provider on page load pops
+// Phantom. Never call request() until the user clicks Connect.
 function getProvider(): EthereumProvider | null {
-  if (typeof window === "undefined") return null
-  return window.ethereum ?? null
+  const providers = getInjectedProviders()
+  if (providers.length === 0) return null
+  return (
+    providers.find((p) => p.isMetaMask && !p.isPhantom) ??
+    providers.find((p) => !p.isPhantom) ??
+    providers[0]
+  )
 }
 
 function short(addr: string) {
@@ -206,7 +226,9 @@ export function BuyCopttCard() {
       .then((cfg) => {
         if (!cancelled) setServerConfig(cfg)
       })
-      .catch((err) => console.error("coptt config probe failed", err))
+      .catch(() => {
+        /* backend unreachable — keep the safe KYC-on default */
+      })
     return () => {
       cancelled = true
     }
@@ -225,7 +247,7 @@ export function BuyCopttCard() {
       } catch (err) {
         // 404 = no wallet yet, that's the common case.
         if (!(err instanceof ApiRequestError && err.status === 404)) {
-          console.error("wallet probe failed", err)
+          /* ignore — mint stays locked until the user binds */
         }
       } finally {
         if (!cancelled) setServerChecked(true)
@@ -236,11 +258,11 @@ export function BuyCopttCard() {
     }
   }, [accessToken])
 
-  // ---- Provider event wiring -------------------------------------------
-  // MetaMask fires accountsChanged when the user switches account; we
-  // mirror that into state so the "switch the connected account back to
-  // the bound one" hint can render.
+  // Listen for account/chain changes only after the user has connected.
+  // Probing eth_accounts / eth_chainId (or even attaching listeners) on
+  // mount makes Phantom open as soon as "View offer" loads this card.
   useEffect(() => {
+    if (!browserAccount) return
     const provider = getProvider()
     if (!provider?.on) return
 
@@ -256,23 +278,11 @@ export function BuyCopttCard() {
     provider.on("accountsChanged", onAccounts)
     provider.on("chainChanged", onChain)
 
-    // Sync once on mount.
-    void (async () => {
-      try {
-        const accs = (await provider.request({ method: "eth_accounts" })) as string[]
-        setBrowserAccount(accs?.[0]?.toLowerCase() ?? null)
-        const cid = (await provider.request({ method: "eth_chainId" })) as string
-        setChainOk(cid?.toLowerCase() === TARGET_CHAIN_ID_HEX)
-      } catch (err) {
-        console.error("initial provider probe failed", err)
-      }
-    })()
-
     return () => {
       provider.removeListener?.("accountsChanged", onAccounts)
       provider.removeListener?.("chainChanged", onChain)
     }
-  }, [])
+  }, [browserAccount])
 
   // ---- Connect: prompt MetaMask + switch chain if needed --------------
   const connect = useCallback(async () => {

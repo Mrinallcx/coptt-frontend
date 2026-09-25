@@ -11,6 +11,11 @@ import { cn } from "@/lib/utils"
 
 type OfferAccent = "copper" | "tin" | "solar" | "estate"
 
+type OfferSpec = {
+  label: string
+  value: string
+}
+
 type OfferCard = {
   ticker: string
   subtitle: string
@@ -18,11 +23,12 @@ type OfferCard = {
   description: string
   href?: string
   accent: OfferAccent
-  equity: string
-  term: string
-  minInvestment: string
-  issueDate: string
+  equity?: string
+  term?: string
+  minInvestment?: string
+  issueDate?: string
   comingSoon?: boolean
+  specs?: OfferSpec[]
 }
 
 const liveCopperCard = {
@@ -119,9 +125,11 @@ function OfferCardItem({
   minInvestment,
   issueDate,
   comingSoon,
+  specs,
 }: OfferCard) {
   const isLive = !!href && !comingSoon
   const styles = isLive ? liveCopperCard : inactiveCard
+  const hasSpecs = !!specs?.length
 
   return (
     <article
@@ -171,47 +179,80 @@ function OfferCardItem({
           ) : null}
         </header>
 
-        <ExpandableDescription text={description} inactive={!isLive} />
+        {hasSpecs && specs ? (
+          <dl className={cn("mt-4 divide-y", styles.divider)}>
+            {specs.map((spec) => (
+              <div
+                key={spec.label}
+                className="grid grid-cols-[8.5rem_1fr] gap-3 py-2.5 first:pt-0 last:pb-0"
+              >
+                <dt
+                  className={cn(
+                    "text-[11px] font-medium uppercase tracking-wide",
+                    isLive
+                      ? "text-muted-foreground"
+                      : "text-zinc-400 dark:text-zinc-500",
+                  )}
+                >
+                  {spec.label}
+                </dt>
+                <dd className={cn("text-sm leading-snug", styles.stat)}>{spec.value}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <>
+            <ExpandableDescription text={description} inactive={!isLive} />
 
-        <dl
+            <dl
+              className={cn(
+                "mt-auto grid grid-cols-3 gap-4 border-t pt-5",
+                styles.divider,
+              )}
+            >
+              <div>
+                <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Equity
+                </dt>
+                <dd
+                  className={cn(
+                    "mt-1 text-sm font-semibold tabular-nums tracking-tight",
+                    styles.stat,
+                  )}
+                >
+                  {equity}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Term
+                </dt>
+                <dd className={cn("mt-1 text-sm font-semibold tracking-tight", styles.stat)}>
+                  {term}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Min. ticket
+                </dt>
+                <dd className={cn("mt-1 text-sm font-semibold tracking-tight", styles.stat)}>
+                  {minInvestment}
+                </dd>
+              </div>
+            </dl>
+          </>
+        )}
+
+        <footer
           className={cn(
-            "mt-auto grid grid-cols-3 gap-4 border-t pt-5",
+            "flex flex-col gap-3 border-t pt-4",
+            hasSpecs ? "mt-auto" : "mt-4",
             styles.divider,
           )}
         >
-          <div>
-            <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              Equity
-            </dt>
-            <dd
-              className={cn(
-                "mt-1 text-sm font-semibold tabular-nums tracking-tight",
-                styles.stat,
-              )}
-            >
-              {equity}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              Term
-            </dt>
-            <dd className={cn("mt-1 text-sm font-semibold tracking-tight", styles.stat)}>
-              {term}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              Min. ticket
-            </dt>
-            <dd className={cn("mt-1 text-sm font-semibold tracking-tight", styles.stat)}>
-              {minInvestment}
-            </dd>
-          </div>
-        </dl>
-
-        <footer className={cn("mt-4 flex flex-col gap-3 border-t pt-4", styles.divider)}>
-          <p className="text-xs text-muted-foreground">Issue {issueDate}</p>
+          {issueDate ? (
+            <p className="text-xs text-muted-foreground">Issue {issueDate}</p>
+          ) : null}
 
           {isLive ? (
             <Button
@@ -244,67 +285,158 @@ export function SectionCards() {
   const offers: OfferCard[] = [
     {
       ticker: "COPTT",
-      subtitle: "Tokenized Copper",
+      subtitle: "New Orleans Vault",
       category: "Commodities",
       description:
-        "A tokenized forward sale of in-ground copper reserves, giving institutional investors discounted, transparent, on-chain exposure to future copper production. Backed by geological certification, regulatory compliance, and optional physical redemption.",
+        "LME Grade A copper cathode held in an LME-listed bonded warehouse in New Orleans.",
       href: "/offers/coptt",
       accent: "copper",
-      equity: "CHF 5.6M",
-      term: "12 mo",
-      minInvestment: "Open",
-      issueDate: "Oct 2025",
+      specs: [
+        {
+          label: "Underlying",
+          value:
+            "LME Grade A copper cathode, Cu-CATH-1 (BS EN 1978), min. 99.9935% Cu",
+        },
+        {
+          label: "Location",
+          value: "New Orleans, LA, USA — LME-listed bonded warehouse",
+        },
+        {
+          label: "Live price",
+          value:
+            "LME Cash Settlement + New Orleans in-warehouse premium (oracle-fed, real-time)",
+        },
+        {
+          label: "Available",
+          value: "[X,000 tonnes] — confirm from current warrant inventory",
+        },
+        {
+          label: "Min. ticket",
+          value: "1 COPTTT (1 lb) — institutional minimums per Reg D 506(b)/Reg S",
+        },
+      ],
     },
     {
-      ticker: "TINTT",
-      subtitle: "Tokenized Tin Reserve",
+      ticker: "COPTTT",
+      subtitle: "Rotterdam Vault",
       category: "Commodities",
       description:
-        "A tokenized forward sale of in-ground tin reserves from certified mines in Africa. Institutional investors gain discounted, transparent, on-chain exposure to future tin production — the essential solder metal powering every AI server and circuit board.",
-      accent: "tin",
-      equity: "$5.0M",
-      term: "36 mo",
-      minInvestment: "$25K",
-      issueDate: "Feb 2026",
+        "LME Grade A copper cathode held in an LME-listed bonded warehouse in Rotterdam.",
+      accent: "copper",
       comingSoon: true,
+      specs: [
+        {
+          label: "Underlying",
+          value:
+            "LME Grade A copper cathode, Cu-CATH-1 (BS EN 1978), min. 99.9935% Cu",
+        },
+        {
+          label: "Location",
+          value: "Rotterdam (Maasvlakte), Netherlands — LME-listed bonded warehouse",
+        },
+        {
+          label: "Live price",
+          value: "LME Cash Settlement + Rotterdam in-warehouse premium (oracle-fed)",
+        },
+        {
+          label: "Available",
+          value: "[X,000 tonnes]",
+        },
+        {
+          label: "Min. ticket",
+          value: "1 COPTTT (1 lb)",
+        },
+      ],
     },
     {
-      ticker: "PANTT",
-      subtitle: "Tokenized Solar Energy",
-      category: "Green energy",
+      ticker: "COPTtr",
+      subtitle: "Los Azules, Argentina",
+      category: "Commodities",
       description:
-        "Tokenized exposure to 4 GW of solar plus 1.5 GW battery storage capacity across Rajasthan and Gujarat, India. Backed by 25-year Power Purchase Agreements with state utilities and private offtakers.",
-      accent: "solar",
-      equity: "$2.5M",
-      term: "25 yr",
-      minInvestment: "$50K",
-      issueDate: "Jan 2026",
+        "Tokenized exposure to the Los Azules open-pit copper deposit in San Juan Province, Argentina.",
+      accent: "copper",
       comingSoon: true,
+      specs: [
+        {
+          label: "Deposit",
+          value:
+            "Los Azules, San Juan Province — open-pit, heap-leach/SX-EW porphyry copper",
+        },
+        {
+          label: "Mining partner",
+          value:
+            "McEwen Copper Inc. (subsidiary of McEwen Inc., NYSE/TSX: MUX)",
+        },
+        {
+          label: "Stage",
+          value: "Pre-production — feasibility complete, FID targeted late 2026",
+        },
+        {
+          label: "Exposure",
+          value:
+            "500,000 tonnes physical copper (~$5B+ notional at current pricing)",
+        },
+        {
+          label: "First production",
+          value: "2030",
+        },
+      ],
     },
     {
-      ticker: "PANTT",
-      subtitle: "Tokenized Solar Energy",
-      category: "Real estate",
+      ticker: "COPTTR",
+      subtitle: "Kamoa-Kakula, DRC",
+      category: "Commodities",
       description:
-        "Tokenized real-asset exposure linked to solar infrastructure and long-duration offtake contracts across institutional-grade renewable projects in India.",
-      accent: "estate",
-      equity: "$2.5M",
-      term: "25 yr",
-      minInvestment: "$50K",
-      issueDate: "Jan 2026",
+        "Tokenized exposure to the Kamoa-Kakula high-grade underground copper mine in the DRC.",
+      accent: "copper",
       comingSoon: true,
+      specs: [
+        {
+          label: "Deposit",
+          value:
+            "Kamoa-Kakula, Kolwezi district, Lualaba Province, DRC — high-grade underground",
+        },
+        {
+          label: "Mining partner",
+          value:
+            "Ivanhoe Mines (indirect 39.6%) / Zijin Mining (indirect 39.6%), operated via Kamoa Holding",
+        },
+        {
+          label: "Stage",
+          value: "Active production, ramping — not pre-production like Los Azules",
+        },
+        {
+          label: "Exposure",
+          value: "[TBD — to be set once mandate is executed]",
+        },
+        {
+          label: "Run-rate",
+          value:
+            "~290,000–330,000 t/y (2026 guidance), scaling toward 500,000+ t/y from 2028",
+        },
+      ],
     },
   ]
 
+  const featuredOffers = offers.slice(0, 3)
+  const nextOffers = offers.slice(3)
+
   return (
-    <div className="flex flex-col gap-4 px-4 lg:px-6">
+    <div className="flex flex-col gap-8 px-4 lg:px-6">
       <CopperPriceCard />
       <CopperPriceChart />
-      <div className="grid auto-rows-fr grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
-        {offers.map((offer, index) => (
+      <div className="grid auto-rows-fr grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-3">
+        {featuredOffers.map((offer, index) => (
           <OfferCardItem key={`${offer.ticker}-${offer.category}-${index}`} {...offer} />
         ))}
       </div>
+      {nextOffers.length > 0 ? (
+        <div className="grid auto-rows-fr grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-3">
+          {nextOffers.map((offer, index) => (
+            <OfferCardItem key={`${offer.ticker}-${offer.category}-${index + 3}`} {...offer} />
+          ))}
+        </div>
+      ) : null}
     </div>
   )
 }
