@@ -220,7 +220,17 @@ function OfferCardItem({
                 >
                   {spec.label}
                 </dt>
-                <dd className={cn("text-xs leading-snug", styles.stat)}>{spec.value}</dd>
+                <dd
+                  className={cn(
+                    "text-xs leading-snug",
+                    styles.stat,
+                    !isLive &&
+                      spec.label.toLowerCase() === "mining partner" &&
+                      "pointer-events-none select-none blur-[5px]",
+                  )}
+                >
+                  {spec.value}
+                </dd>
               </div>
             ))}
           </dl>
