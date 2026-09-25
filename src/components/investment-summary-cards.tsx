@@ -16,21 +16,21 @@ import {
 } from "@/components/ui/chart"
 
 const investedChartData = [
-  { month: "Jan", invested: 120000 },
-  { month: "Feb", invested: 132000 },
+  { month: "Jan", invested: 72500 },
+  { month: "Feb", invested: 116000 },
   { month: "Mar", invested: 145000 },
-  { month: "Apr", invested: 158000 },
-  { month: "May", invested: 172000 },
-  { month: "Jun", invested: 185000 },
+  { month: "Apr", invested: 174000 },
+  { month: "May", invested: 174000 },
+  { month: "Jun", invested: 174000 },
 ]
 
 const currentValueChartData = [
-  { month: "Jan", currentValue: 138000 },
-  { month: "Feb", currentValue: 152000 },
-  { month: "Mar", currentValue: 168000 },
-  { month: "Apr", currentValue: 184500 },
-  { month: "May", currentValue: 199800 },
-  { month: "Jun", currentValue: 211250 },
+  { month: "Jan", currentValue: 72500 },
+  { month: "Feb", currentValue: 116400 },
+  { month: "Mar", currentValue: 146200 },
+  { month: "Apr", currentValue: 176400 },
+  { month: "May", currentValue: 177800 },
+  { month: "Jun", currentValue: 178640 },
 ]
 
 const investedChartConfig = {
@@ -48,21 +48,21 @@ const currentValueChartConfig = {
 } satisfies ChartConfig
 
 const totalReturnsChartData = [
-  { month: "Jan", returns: 4200 },
-  { month: "Feb", returns: 8600 },
-  { month: "Mar", returns: 12200 },
-  { month: "Apr", returns: 16750 },
-  { month: "May", returns: 21400 },
-  { month: "Jun", returns: 26250 },
+  { month: "Jan", returns: 0 },
+  { month: "Feb", returns: 400 },
+  { month: "Mar", returns: 1200 },
+  { month: "Apr", returns: 2400 },
+  { month: "May", returns: 3800 },
+  { month: "Jun", returns: 4640 },
 ]
 
 const investmentsChartData = [
   { month: "Jan", active: 1, pending: 0 },
-  { month: "Feb", active: 1, pending: 1 },
+  { month: "Feb", active: 2, pending: 0 },
   { month: "Mar", active: 2, pending: 1 },
   { month: "Apr", active: 2, pending: 2 },
-  { month: "May", active: 2, pending: 1 },
-  { month: "Jun", active: 2, pending: 1 },
+  { month: "May", active: 2, pending: 2 },
+  { month: "Jun", active: 2, pending: 2 },
 ]
 
 const totalReturnsChartConfig = {
@@ -90,7 +90,7 @@ export function InvestmentSummaryCards() {
         <CardContent className="pt-6">
           <CardDescription>Total Invested</CardDescription>
           <CardTitle className="mt-2 text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            $185,000
+            $174,000
           </CardTitle>
         </CardContent>
         <CardContent className="pt-0">
@@ -127,7 +127,7 @@ export function InvestmentSummaryCards() {
         <CardContent className="pt-6">
           <CardDescription>Current Value</CardDescription>
           <CardTitle className="mt-2 text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            $211,250
+            $178,640
           </CardTitle>
         </CardContent>
         <CardContent className="pt-0">
@@ -164,7 +164,7 @@ export function InvestmentSummaryCards() {
         <CardContent className="pt-6 pb-2">
           <CardDescription>Total Returns</CardDescription>
           <CardTitle className="mt-2 text-2xl font-semibold tabular-nums text-emerald-600 @[250px]/card:text-3xl">
-            +$26,250
+            +$4,640
           </CardTitle>
         </CardContent>
         <CardContent className="pt-0">
@@ -197,14 +197,14 @@ export function InvestmentSummaryCards() {
           </ChartContainer>
         </CardContent>
         <CardFooter className="pt-0">
-          <p className="text-sm font-medium text-emerald-600">+14.2% overall</p>
+          <p className="text-sm font-medium text-emerald-600">+2.7% overall</p>
         </CardFooter>
       </Card>
       <Card className="@container/card">
         <CardContent className="pt-6 pb-2">
           <CardDescription>Investments</CardDescription>
           <CardTitle className="mt-2 text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            3
+            4
           </CardTitle>
         </CardContent>
         <CardContent className="pt-0">
@@ -243,7 +243,7 @@ export function InvestmentSummaryCards() {
         <CardFooter className="pt-0 text-sm">
           <p className="flex gap-2 text-muted-foreground">
             <span className="text-emerald-600">2 Active</span>
-            <span>1 Pending</span>
+            <span>2 Pending</span>
             <span>0 Done</span>
           </p>
         </CardFooter>

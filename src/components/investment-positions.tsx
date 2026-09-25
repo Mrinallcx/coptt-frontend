@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import {
   Area,
   AreaChart,
@@ -32,111 +33,131 @@ type Position = {
   performanceLabel: string
   details: TokenDetail[]
   investedOn: string
+  href?: string
 }
 
 const positions: Position[] = [
   {
-    title: "COPTT — Tokenized Copper",
+    title: "COPTT — New Orleans Vault",
     category: "Commodities",
     status: "Active",
     chartData: [
-      { date: "Nov '25", value: 75000 },
-      { date: "Nov '25", value: 74300 },
-      { date: "Dec '25", value: 76800 },
-      { date: "Dec '25", value: 78900 },
-      { date: "Jan '26", value: 77400 },
-      { date: "Jan '26", value: 80100 },
-      { date: "Feb '26", value: 82600 },
-      { date: "Feb '26", value: 84200 },
-      { date: "Mar '26", value: 83500 },
-      { date: "Mar '26", value: 85400 },
-      { date: "Apr '26", value: 86250 },
+      { date: "Nov '25", value: 72500 },
+      { date: "Dec '25", value: 73100 },
+      { date: "Jan '26", value: 71800 },
+      { date: "Feb '26", value: 73600 },
+      { date: "Mar '26", value: 74200 },
+      { date: "Apr '26", value: 75400 },
     ],
     chartColor: "#d97706",
     chartGradientFrom: "#fbbf24",
-    entryValue: 75000,
-    invested: "$75,000",
-    currentValue: "$86,250",
-    performancePct: 15,
-    performanceLabel: "+15%",
+    entryValue: 72500,
+    invested: "$72,500",
+    currentValue: "$75,400",
+    performancePct: 4,
+    performanceLabel: "+4%",
     details: [
-      { label: "Tokens Held", value: "16,741" },
-      { label: "Entry Price", value: "$4.48/token" },
-      { label: "Current Price", value: "$5.15/token" },
-      { label: "Current Spot", value: "$5.60/lb (LME)" },
-      { label: "Discount at Purchase", value: "20%" },
-      { label: "Interest Accrued", value: "2% p.a." },
-      { label: "Redemption Start", value: "2030" },
-      { label: "Unrealised P&L", value: "+$11,250" },
+      { label: "Tokens Held", value: "5 COPTT" },
+      { label: "Quantity", value: "5 Mt" },
+      { label: "Entry Price", value: "$14,500/Mt" },
+      { label: "Current Price", value: "$15,080/Mt" },
+      { label: "Underlying", value: "LME Grade A cathode" },
+      { label: "Location", value: "New Orleans, LA" },
+      { label: "Min. Ticket", value: "1 COPTT (1 Mt)" },
+      { label: "Unrealised P&L", value: "+$2,900" },
     ],
     investedOn: "15/11/2025",
+    href: "/offers/coptt",
   },
   {
-    title: "TINTT — Tokenized Tin",
+    title: "COPTT — Rotterdam Vault",
     category: "Commodities",
     status: "Active",
     chartData: [
-      { date: "Feb '26", value: 25000 },
-      { date: "Feb '26", value: 24600 },
-      { date: "Mar '26", value: 25800 },
-      { date: "Mar '26", value: 26900 },
-      { date: "Apr '26", value: 27500 },
-      { date: "Apr '26", value: 26800 },
-      { date: "May '26", value: 28300 },
-      { date: "May '26", value: 29100 },
-      { date: "Jun '26", value: 28700 },
-      { date: "Jun '26", value: 29500 },
-      { date: "Jul '26", value: 29800 },
+      { date: "Jan '26", value: 43500 },
+      { date: "Feb '26", value: 42800 },
+      { date: "Mar '26", value: 44100 },
+      { date: "Apr '26", value: 44600 },
+      { date: "May '26", value: 44900 },
+      { date: "Jun '26", value: 45240 },
     ],
-    chartColor: "#0891b2",
-    chartGradientFrom: "#22d3ee",
-    entryValue: 25000,
-    invested: "$25,000",
-    currentValue: "$29,800",
-    performancePct: 19.2,
-    performanceLabel: "+19.2%",
+    chartColor: "#b45309",
+    chartGradientFrom: "#f59e0b",
+    entryValue: 43500,
+    invested: "$43,500",
+    currentValue: "$45,240",
+    performancePct: 4,
+    performanceLabel: "+4%",
     details: [
-      { label: "Tokens Held", value: "10,000" },
-      { label: "Entry Price", value: "$2.50/token" },
-      { label: "Current Price", value: "$2.98/token" },
-      { label: "Current Spot (LME)", value: "$32,400/mt" },
-      { label: "Discount at Purchase", value: "15%" },
-      { label: "Interest Accrued", value: "1.5% p.a." },
-      { label: "Redemption Start", value: "2029" },
-      { label: "Unrealised P&L", value: "+$4,800" },
+      { label: "Tokens Held", value: "3 COPTT" },
+      { label: "Quantity", value: "3 Mt" },
+      { label: "Entry Price", value: "$14,500/Mt" },
+      { label: "Current Price", value: "$15,080/Mt" },
+      { label: "Underlying", value: "LME Grade A cathode" },
+      { label: "Location", value: "Rotterdam, NL" },
+      { label: "Min. Ticket", value: "1 COPTT (1 Mt)" },
+      { label: "Unrealised P&L", value: "+$1,740" },
     ],
     investedOn: "01/02/2026",
+    href: "/offers/coptt",
   },
   {
-    title: "PANTT — Tokenized Solar Energy",
-    category: "Green Energy",
+    title: "COPTTR — Kamoa-Kakula",
+    category: "Commodities",
     status: "Pending",
     chartData: [
-      { date: "Jan '26", value: 50000 },
-      { date: "Feb '26", value: 50000 },
-      { date: "Mar '26", value: 50000 },
-      { date: "Apr '26", value: 50000 },
-      { date: "May '26", value: 50000 },
-      { date: "Jun '26", value: 50000 },
+      { date: "Mar '26", value: 29000 },
+      { date: "Apr '26", value: 29000 },
+      { date: "May '26", value: 29000 },
+      { date: "Jun '26", value: 29000 },
     ],
-    chartColor: "#16a34a",
-    chartGradientFrom: "#4ade80",
-    entryValue: 50000,
-    invested: "$50,000",
-    currentValue: "$50,000",
+    chartColor: "#a16207",
+    chartGradientFrom: "#eab308",
+    entryValue: 29000,
+    invested: "$29,000",
+    currentValue: "$29,000",
     performancePct: 0,
     performanceLabel: "0%",
     details: [
-      { label: "Tokens Held", value: "20,000" },
-      { label: "Entry Price", value: "$2.50/token" },
-      { label: "Current Price", value: "$2.50/token" },
-      { label: "Revenue Share", value: "8% p.a." },
-      { label: "PPA Term", value: "25 years" },
-      { label: "Interest Accrued", value: "0% (pending)" },
-      { label: "Redemption Start", value: "2028" },
+      { label: "Tokens Reserved", value: "2 COPTTR" },
+      { label: "Quantity", value: "2 Mt" },
+      { label: "Entry Price", value: "$14,500/Mt" },
+      { label: "Deposit", value: "Kamoa-Kakula, DRC" },
+      { label: "Mining Partner", value: "Ivanhoe / Zijin" },
+      { label: "Future Production", value: "May 2027" },
+      { label: "Exposure", value: "TBD — mandate pending" },
       { label: "Unrealised P&L", value: "$0" },
     ],
-    investedOn: "15/01/2026",
+    investedOn: "12/03/2026",
+  },
+  {
+    title: "COPTTR — Los Azules",
+    category: "Commodities",
+    status: "Pending",
+    chartData: [
+      { date: "Apr '26", value: 29000 },
+      { date: "May '26", value: 29000 },
+      { date: "Jun '26", value: 29000 },
+      { date: "Jul '26", value: 29000 },
+    ],
+    chartColor: "#92400e",
+    chartGradientFrom: "#d97706",
+    entryValue: 29000,
+    invested: "$29,000",
+    currentValue: "$29,000",
+    performancePct: 0,
+    performanceLabel: "0%",
+    details: [
+      { label: "Tokens Reserved", value: "2 COPTTR" },
+      { label: "Quantity", value: "2 Mt" },
+      { label: "Entry Price", value: "$14,500/Mt" },
+      { label: "Deposit", value: "Los Azules, Argentina" },
+      { label: "Mining Partner", value: "McEwen Copper" },
+      { label: "Future Production", value: "Sep 2030" },
+      { label: "Stage", value: "Pre-production" },
+      { label: "Unrealised P&L", value: "$0" },
+    ],
+    investedOn: "20/04/2026",
   },
 ]
 
@@ -343,12 +364,16 @@ function PositionCard({ position }: { position: Position }) {
       {/* ── Footer ── */}
       <CardFooter className="border-t px-6 py-3 flex items-center justify-between text-xs">
         <span className="text-muted-foreground">Invested on {position.investedOn}</span>
-        <a
-          href="#"
-          className="font-semibold text-primary hover:opacity-80 hover:underline transition-opacity"
-        >
-          View Deal →
-        </a>
+        {position.href ? (
+          <Link
+            href={position.href}
+            className="font-semibold text-primary hover:opacity-80 hover:underline transition-opacity"
+          >
+            View Deal →
+          </Link>
+        ) : (
+          <span className="font-semibold text-muted-foreground">Coming soon</span>
+        )}
       </CardFooter>
     </Card>
   )

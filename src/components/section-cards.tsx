@@ -378,7 +378,7 @@ export function SectionCards() {
       accent: "copper",
       comingSoon: true,
       futureProduction: true,
-      coverImage: "/copper-rack.jpg",
+      coverImage: "/copper-mine.jpg",
       specs: [
         {
           label: "Deposit",
@@ -411,7 +411,7 @@ export function SectionCards() {
       accent: "copper",
       comingSoon: true,
       futureProduction: true,
-      coverImage: "/copper-shelf.jpg",
+      coverImage: "/copper-camp.jpg",
       specs: [
         {
           label: "Deposit",
@@ -439,9 +439,28 @@ export function SectionCards() {
 
   return (
     <div className="flex flex-col gap-8 px-4 lg:px-6">
+      <div className="relative overflow-hidden rounded-2xl">
+        <img
+          src="/copper-banner-coils.jpg"
+          alt=""
+          className="h-48 w-full object-cover md:h-56"
+        />
+        <div className="absolute inset-0 bg-black/40" aria-hidden />
+        <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center md:px-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/70 md:text-sm">
+            Commodities
+          </p>
+          <h2 className="mt-1.5 font-heading text-3xl font-semibold tracking-tight text-white md:text-5xl">
+            Physical copper, tokenized
+          </h2>
+          <p className="mt-2 max-w-2xl text-base text-white/75 md:text-lg">
+            LME Grade A cathode in bonded warehouses — 1 COPTT = 1 Mt.
+          </p>
+        </div>
+      </div>
       <CopperPriceCard />
       <CopperPriceChart />
-      <div className="grid auto-rows-fr grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
+      <div className="grid auto-rows-fr grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-3">
         {offers.map((offer, index) => (
           <OfferCardItem key={`${offer.ticker}-${offer.category}-${index}`} {...offer} />
         ))}

@@ -205,15 +205,6 @@ export function InvestCheckout() {
                   Price {formatUsd(priceMt)} / Mt
                 </p>
                 <div className="space-y-2">
-                  <Label htmlFor="invest-usd">Investment amount (USD)</Label>
-                  <Input
-                    id="invest-usd"
-                    inputMode="decimal"
-                    value={usdInput}
-                    onChange={(e) => onUsdChange(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
                   <Label htmlFor="invest-mt">Copper to purchase (Mt)</Label>
                   <Input
                     id="invest-mt"
@@ -224,6 +215,15 @@ export function InvestCheckout() {
                   <p className="text-xs text-muted-foreground">
                     Equals {mt ? formatMt(mt) : "—"} COPTT
                   </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="invest-usd">Investment amount (USD)</Label>
+                  <Input
+                    id="invest-usd"
+                    inputMode="decimal"
+                    value={usdInput}
+                    onChange={(e) => onUsdChange(e.target.value)}
+                  />
                 </div>
                 {!valid ? (
                   <p className="text-xs text-destructive">Enter at least 1 Mt.</p>
