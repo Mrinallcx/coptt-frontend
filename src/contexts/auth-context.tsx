@@ -23,6 +23,7 @@ import {
   type AuthResponse,
   type UserProfile,
 } from "@/lib/api";
+import { DEV_BYPASS_AUTH, DEV_BYPASS_USER } from "@/lib/dev-bypass-auth";
 const COOKIE_SESSION = "cookie-session";
 
 interface AuthContextValue {
@@ -57,6 +58,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // migration. Never leave a usable refresh token in Web Storage.
       localStorage.removeItem("coptt_access_token");
       localStorage.removeItem("coptt_refresh_token");
+      if (DEV_BYPASS_AUTH) {
+        if (!cancelled) {
+          setUser(DEV_BYPASS_USER);
+          setAccessToken(COOKIE_SESSION);
+          setIsLoading(false);
+        }
+        return;
+      }
       try {
         const profile = await authApi.getProfile(COOKIE_SESSION);
         if (cancelled) return;

@@ -34,6 +34,7 @@ import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
 
 import { useAuth } from "@/contexts/auth-context"
+import { DEV_BYPASS_AUTH } from "@/lib/dev-bypass-auth"
 import {
   ApiRequestError,
   copttApi,
@@ -220,6 +221,14 @@ export function BuyCopttCard() {
   // Public server config: KYC gate status + chain id. Public endpoint
   // so we don't need to wait for auth.
   useEffect(() => {
+    if (DEV_BYPASS_AUTH) {
+      setServerConfig({
+        require_kyc_for_mint: false,
+        mint_enabled: true,
+        chain_id: 11155111,
+      })
+      return
+    }
     let cancelled = false
     copttApi
       .getConfig()
@@ -235,7 +244,7 @@ export function BuyCopttCard() {
   }, [])
 
   useEffect(() => {
-    if (!accessToken) {
+    if (DEV_BYPASS_AUTH || !accessToken) {
       setServerChecked(true)
       return
     }

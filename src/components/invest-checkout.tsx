@@ -22,6 +22,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import { copttApi } from "@/lib/api"
+import { DEV_BYPASS_AUTH } from "@/lib/dev-bypass-auth"
 import { cn } from "@/lib/utils"
 
 const FALLBACK_USD_PER_LB = 4.251
@@ -82,6 +83,7 @@ export function InvestCheckout() {
   const [reference] = useState(() => `COPTT-${Date.now().toString(36).toUpperCase()}`)
 
   useEffect(() => {
+    if (DEV_BYPASS_AUTH) return
     let cancelled = false
     copttApi
       .getPrice()

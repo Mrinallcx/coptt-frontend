@@ -12,6 +12,7 @@
 // sign-in form rendering" UX bug).
 
 import { NextResponse, type NextRequest } from "next/server";
+import { DEV_BYPASS_AUTH } from "@/lib/dev-bypass-auth";
 
 // Must match the HttpOnly cookie written by the Go auth backend.
 const AUTH_COOKIE_NAME = "coptt_at";
@@ -25,6 +26,17 @@ const AUTH_PREFIXES = ["/login", "/signup"];
 
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  if (DEV_BYPASS_AUTH) {
+    if (AUTH_PREFIXES.some((p) => pathname.startsWith(p))) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/dashboard";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next();
+  }
+
   // The marker keeps page navigation alive while the short access cookie is
   // being refreshed. It is not authorization; every API route validates the
   // signed HttpOnly token and its DB session.
