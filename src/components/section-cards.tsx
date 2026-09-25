@@ -454,7 +454,7 @@ export function SectionCards() {
             Physical copper, tokenized
           </h2>
           <p className="mt-2 max-w-2xl text-base text-white/75 md:text-lg">
-            LME Grade A cathode in bonded warehouses — 1 COPTT = 1 Mt.
+            LME Grade A cathode in bonded warehouses — 1 COPTT = 1 lbs.
           </p>
         </div>
       </div>
